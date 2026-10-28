@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#061a14" />
+    <meta name="description" content="Una travesía entre la vida y la muerte. Escucha la leyenda de Shenron y formula tu deseo al Oráculo." />
+    <title>Shenron — El ciclo eterno</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <div class="scene" aria-hidden="true">
+      <video id="fallback-video" class="scene__video" src="Shenron_video.mp4" autoplay muted loop playsinline preload="auto"></video>
+      <canvas id="frame-canvas" class="scene__canvas"></canvas>
+      <canvas id="souls-canvas" class="scene__souls"></canvas>
+      <div class="scene__veil"></div>
+      <div class="scene__grain"></div>
+    </div>
+
+    <header class="topbar">
+      <a class="wordmark" href="#inicio" aria-label="Shenron, inicio">
+        <span class="wordmark__sigil" aria-hidden="true">龍</span>
+        <span>SHENRON<span class="wordmark__dot">.</span></span>
+      </a>
+      <div class="topbar__right"><span class="status-dot"></span><span>EL CICLO ETERNO</span></div>
+    </header>
+
+    <main>
+      <section class="story story--opening" id="inicio" aria-labelledby="opening-title">
+        <div class="eyebrow reveal"><span class="eyebrow__line"></span> UNA LEYENDA DESPIERTA</div>
+        <h1 class="reveal" id="opening-title">Más allá de<br />la <em>vida.</em></h1>
+        <p class="story__copy reveal">Cuando las siete esferas se reúnen, el cielo escucha. Y del silencio antiguo emerge quien puede cambiarlo todo.</p>
+        <a class="scroll-cue reveal" href="#leyenda"><span class="scroll-cue__mouse"><i></i></span><span>DESCIENDE AL MITO</span></a>
+        <span class="story__index reveal">01 <i></i> 03</span>
+      </section>
+
+      <section class="story story--middle" id="leyenda" aria-labelledby="legend-title">
+        <div class="story__card reveal">
+          <div class="eyebrow"><span class="eyebrow__line"></span> EL GUARDIÁN DEL DESEO</div>
+          <h2 id="legend-title">Majestuoso.<br />Implacable.<br /><em>Eterno.</em></h2>
+          <p>Shenron atraviesa las nubes como un río de jade. Su voz retumba entre los mundos: no es un dios que concede por capricho, sino una fuerza antigua que responde al corazón de quien invoca.</p>
+          <div class="card-foot"><span>FUERZA PRIMORDIAL</span><span class="card-foot__symbol">✳</span></div>
+        </div>
+        <span class="story__index">02 <i></i> 03</span>
+      </section>
+
+      <section class="story story--final" id="renacer" aria-labelledby="rebirth-title">
+        <div class="story__card story__card--right reveal">
+          <div class="eyebrow"><span class="eyebrow__line"></span> VIDA · MUERTE · RENACER</div>
+          <h2 id="rebirth-title">El final es<br />solo otra<br /><em>puerta.</em></h2>
+          <p>Puede devolver la vida a lo perdido y abrir caminos que parecían cerrados. Pero cada deseo deja una huella. La eternidad siempre exige que miremos de frente aquello que pedimos.</p>
+          <div class="card-foot"><span>ELIGE CON SABIDURÍA</span><span class="card-foot__symbol">✳</span></div>
+        </div>
+        <span class="story__index">03 <i></i> 03</span>
+      </section>
+
+      <section class="oracle" id="oraculo" aria-labelledby="oracle-title">
+        <div class="oracle__inner reveal">
+          <div class="eyebrow eyebrow--center"><span class="eyebrow__line"></span> EL INSTANTE HA LLEGADO <span class="eyebrow__line"></span></div>
+          <div class="oracle__seal" aria-hidden="true"><span>龍</span><i></i></div>
+          <h2 id="oracle-title">El Oráculo<br /><em>de Shenron</em></h2>
+          <p class="oracle__intro">El cielo está en calma. Escribe tu deseo o pregunta; cada palabra abre un nuevo sendero.</p>
+          <form class="wish-form" id="wish-form">
+            <label class="sr-only" for="wish-input">Tu deseo o pregunta</label>
+            <input id="wish-input" name="wish" maxlength="180" autocomplete="off" placeholder="¿Qué deseas preguntar al dragón?" required />
+            <button type="submit" aria-label="Enviar deseo"><span>INVOCAR</span><b aria-hidden="true">↗</b></button>
+          </form>
+          <div class="oracle__reply" id="oracle-reply" role="status" aria-live="polite"></div>
+          <div class="oracle__foot"><span>LAS SIETE ESFERAS TE ESCUCHAN</span><span>龍</span></div>
+        </div>
+        <footer class="page-footer"><span>UNA HISTORIA SOBRE LO QUE PERMANECE</span><a href="#inicio">VOLVER AL INICIO ↑</a></footer>
+      </section>
+    </main>
+
+    <div class="loading" id="loading" role="status" aria-live="polite">
+      <span class="loading__sigil">龍</span><span class="loading__label">INVOCANDO A SHENRON</span>
+      <span class="loading__track"><i id="loading-bar"></i></span><span class="loading__percent" id="loading-percent">0%</span>
+    </div>
+  </body>
+</html>
