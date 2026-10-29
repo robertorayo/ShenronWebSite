@@ -52,8 +52,6 @@ h1 em, h2 em { color: var(--foam); font-style: normal; }
 .story__card { width: min(465px, 100%); padding: clamp(26px, 4vw, 48px); border: 1px solid var(--line); border-radius: 3px; background: linear-gradient(135deg, rgba(7, 40, 29, .81), var(--glass)); box-shadow: 0 24px 100px rgba(1, 14, 9, .34), inset 0 1px 0 rgba(212, 247, 223, .08); backdrop-filter: blur(18px); }
 .story__card h2 { margin: 24px 0 17px; font-size: clamp(44px, 6.1vw, 76px); line-height: .99; }
 .story__card p { max-width: 370px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.9; }
-.card-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--foam); font-size: 8px; letter-spacing: .19em; }
-.card-foot__symbol { font-size: 16px; }
 .story--final { align-items: flex-start; }
 .story__card--right { margin-left: 0; }
 .rules { position: relative; display: grid; grid-template-columns: minmax(250px, .8fr) minmax(0, 1.2fr); gap: clamp(36px, 8vw, 130px); min-height: 0; padding: 112px clamp(25px, 12vw, 180px) 220px; align-items: center; background: linear-gradient(180deg, rgba(4, 21, 16, 0) 0%, rgba(4, 21, 16, .42) 15%, rgba(4, 21, 16, .58) 52%, rgba(4, 21, 16, .25) 80%, rgba(4, 21, 16, 0) 100%); }
