@@ -8,13 +8,14 @@
     <title>Shenron — El ciclo eterno</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" as="image" href="assets/poster/shenron-poster.jpg" fetchpriority="high" />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
     <script src="script.js" defer></script>
   </head>
   <body>
     <div class="scene" aria-hidden="true">
-      <video id="fallback-video" class="scene__video" src="Shenron_video.mp4" autoplay muted loop playsinline preload="auto"></video>
+      <video id="fallback-video" class="scene__video" src="Shenron_video.mp4" poster="assets/poster/shenron-poster.jpg" autoplay muted loop playsinline preload="metadata"></video>
       <canvas id="frame-canvas" class="scene__canvas"></canvas>
       <canvas id="souls-canvas" class="scene__souls"></canvas>
       <div class="scene__veil"></div>
@@ -26,7 +27,7 @@
         <span class="wordmark__sigil" aria-hidden="true">龍</span>
         <span>SHENRON<span class="wordmark__dot">.</span></span>
       </a>
-      <div class="topbar__right"><span class="status-dot"></span><span>EL CICLO ETERNO</span></div>
+      <div class="topbar__right"><img class="dragon-orb" src="assets/bolaDragon7Estrellas.png" alt="" aria-hidden="true" /><span>EL CICLO ETERNO</span></div>
     </header>
 
     <main>
@@ -34,8 +35,7 @@
         <div class="eyebrow reveal"><span class="eyebrow__line"></span> UNA LEYENDA DESPIERTA</div>
         <h1 class="reveal" id="opening-title">Más allá de<br />la <em>vida.</em></h1>
         <p class="story__copy reveal">Cuando las siete esferas se reúnen, el cielo escucha. Y del silencio antiguo emerge quien puede cambiarlo todo.</p>
-        <a class="scroll-cue reveal" href="#leyenda"><span class="scroll-cue__mouse"><i></i></span><span>DESCIENDE AL MITO</span></a>
-        <span class="story__index reveal">01 <i></i> 03</span>
+        <a class="scroll-cue reveal" href="#leyenda">DESCIENDE AL MITO</a>
       </section>
 
       <section class="story story--middle" id="leyenda" aria-labelledby="legend-title">
@@ -45,7 +45,6 @@
           <p>Shenron atraviesa las nubes como un río de jade. Su voz retumba entre los mundos: no es un dios que concede por capricho, sino una fuerza antigua que responde al corazón de quien invoca.</p>
           <div class="card-foot"><span>FUERZA PRIMORDIAL</span><span class="card-foot__symbol">✳</span></div>
         </div>
-        <span class="story__index">02 <i></i> 03</span>
       </section>
 
       <section class="story story--final" id="renacer" aria-labelledby="rebirth-title">
@@ -55,7 +54,19 @@
           <p>Puede devolver la vida a lo perdido y abrir caminos que parecían cerrados. Pero cada deseo deja una huella. La eternidad siempre exige que miremos de frente aquello que pedimos.</p>
           <div class="card-foot"><span>ELIGE CON SABIDURÍA</span><span class="card-foot__symbol">✳</span></div>
         </div>
-        <span class="story__index">03 <i></i> 03</span>
+      </section>
+
+      <section class="rules" id="reglas" aria-labelledby="rules-title">
+        <div class="rules__intro reveal">
+          <div class="eyebrow"><span class="eyebrow__line"></span> EL CÓDIGO DEL DRAGÓN</div>
+          <h2 id="rules-title">Las reglas<br /><em>del deseo.</em></h2>
+          <p>El poder de Shenron es inmenso, pero no es infinito. Quien invoca también acepta el peso de cada palabra.</p>
+        </div>
+        <div class="rules__grid">
+          <article class="rule reveal"><span class="rule__number">01</span><h3>Un corazón claro</h3><p>Las esferas responden a una intención precisa. Un deseo ambiguo puede tomar un camino que nadie esperaba.</p></article>
+          <article class="rule reveal"><span class="rule__number">02</span><h3>El tiempo de espera</h3><p>Después de conceder un deseo, las esferas se dispersan y duermen. El ciclo necesita tiempo antes de volver a reunirse.</p></article>
+          <article class="rule reveal"><span class="rule__number">03</span><h3>Nada queda sin huella</h3><p>La vida puede regresar, pero toda transformación altera el equilibrio. El dragón no borra las consecuencias.</p></article>
+        </div>
       </section>
 
       <section class="oracle" id="oraculo" aria-labelledby="oracle-title">

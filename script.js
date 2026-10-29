@@ -106,6 +106,8 @@
     loadingBar.style.width = `${percent}%`;
     loadingPercent.textContent = `${percent}%`;
     if (index === 1 || currentFrame === -1) drawFrame(wantedFrame());
+    // The first usable frame is enough to release the page; remaining frames stream in.
+    if (index === 1) finishLoading();
     if (loadedCount === FRAME_COUNT) finishLoading();
   }
 
