@@ -149,23 +149,12 @@
     for (let worker = 0; worker < concurrency; worker += 1) loadNext();
   }
 
-  // Keep a small exit delay so an element cannot flicker at the observer boundary.
-  const revealTimers = new WeakMap();
+  // The same CSS transition runs when an element enters or leaves the reading area.
   const revealObserver = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
-      const element = entry.target;
-      const pendingExit = revealTimers.get(element);
-      if (pendingExit) clearTimeout(pendingExit);
-      if (entry.isIntersecting) {
-        element.classList.add("is-visible");
-      } else if (element.classList.contains("is-visible")) {
-        revealTimers.set(element, setTimeout(() => {
-          element.classList.remove("is-visible");
-          revealTimers.delete(element);
-        }, 280));
-      }
+      entry.target.classList.toggle("is-visible", entry.isIntersecting);
     });
-  }, { threshold: 0.08, rootMargin: "-16% 0px -16% 0px" });
+  }, { threshold: 0.18, rootMargin: "0px 0px -10% 0px" });
   document.querySelectorAll(".reveal").forEach((element) => revealObserver.observe(element));
 
   // Small luminous motes drift toward the pointer and fade softly behind the story.
