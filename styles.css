@@ -47,13 +47,15 @@ h1, h2 { font-family: Manrope, sans-serif; font-weight: 500; letter-spacing: -.0
 h1 { max-width: 800px; margin: 25px 0 21px; font-size: clamp(70px, 12vw, 172px); line-height: .87; }
 h1 em, h2 em { color: var(--foam); font-style: normal; }
 .story__copy { max-width: 390px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.8; }
+.story__whisper { display: flex; align-items: center; gap: 11px; margin: 19px 0 0; color: rgba(138, 224, 186, .72); font-size: 8px; font-weight: 700; letter-spacing: .2em; }
+.story__whisper span { color: var(--foam); font-size: 9px; letter-spacing: .32em; }
 .scroll-cue { position: absolute; bottom: 38px; left: 50%; display: block; width: max-content; margin: 0; padding: 0; color: var(--mint); font-family: Manrope, sans-serif; font-size: 12px; font-weight: 800; letter-spacing: .2em; text-align: center; transform: translateX(-50%); }
 .story--middle { justify-content: center; align-items: flex-end; }
 .story__card { width: min(465px, 100%); padding: clamp(26px, 4vw, 48px); border: 1px solid var(--line); border-radius: 3px; background: linear-gradient(135deg, rgba(7, 40, 29, .81), var(--glass)); box-shadow: 0 24px 100px rgba(1, 14, 9, .34), inset 0 1px 0 rgba(212, 247, 223, .08); backdrop-filter: blur(18px); }
+.story__card { position: relative; overflow: hidden; }
+.card__seal { position: absolute; top: 18px; right: 22px; color: rgba(138, 224, 186, .16); font: 500 58px/1 Manrope, sans-serif; }
 .story__card h2 { margin: 24px 0 17px; font-size: clamp(44px, 6.1vw, 76px); line-height: .99; }
 .story__card p { max-width: 370px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.9; }
-.story--final { align-items: flex-start; }
-.story__card--right { margin-left: 0; }
 .rules { position: relative; display: grid; grid-template-columns: minmax(250px, .8fr) minmax(0, 1.2fr); gap: clamp(36px, 8vw, 130px); min-height: 0; padding: 112px clamp(25px, 12vw, 180px) 220px; align-items: center; background: linear-gradient(180deg, rgba(4, 21, 16, 0) 0%, rgba(4, 21, 16, .42) 15%, rgba(4, 21, 16, .58) 52%, rgba(4, 21, 16, .25) 80%, rgba(4, 21, 16, 0) 100%); }
 .rules__intro h2 { margin: 24px 0 18px; font-size: clamp(50px, 7vw, 85px); line-height: .96; }
 .rules__intro p { max-width: 320px; color: var(--muted); font-size: 13px; line-height: 1.9; }
@@ -70,6 +72,7 @@ h1 em, h2 em { color: var(--foam); font-style: normal; }
 .oracle__seal i { position: absolute; inset: -7px; border: 1px solid rgba(138, 224, 186, .2); border-radius: 50%; }
 .oracle h2 { margin: 0; font-size: clamp(48px, 7vw, 76px); line-height: .99; }
 .oracle__intro { max-width: 390px; margin: 20px auto 27px; color: var(--muted); font-size: 13px; line-height: 1.8; }
+.oracle__litany { display: grid; gap: 6px; margin: -10px auto 24px; color: rgba(138, 224, 186, .72); font-size: 10px; font-style: italic; letter-spacing: .05em; line-height: 1.45; }
 .wish-form { display: flex; gap: 8px; padding: 7px; border: 1px solid rgba(138, 224, 186, .34); border-radius: 4px; background: rgba(6, 34, 26, .74); box-shadow: 0 0 30px rgba(21, 155, 112, .09); transition: box-shadow .3s, border-color .3s; }
 .wish-form:focus-within { border-color: var(--foam); box-shadow: 0 0 34px rgba(138, 224, 186, .18); }
 .wish-form input { flex: 1; min-width: 0; padding: 13px 14px; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 12px; }
@@ -98,7 +101,6 @@ h1 em, h2 em { color: var(--foam); font-style: normal; }
 @keyframes pulse { 50% { opacity: .55; } }
 @keyframes status-wave { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.45); } }
 @keyframes oracle-glow { 25% { text-shadow: 0 0 20px rgba(138, 224, 186, .9); } 100% { text-shadow: 0 0 0 transparent; } }
-@media (min-width: 900px) { .story__card--right { margin-left: 2vw; } }
 @media (max-width: 700px) {
   .topbar { padding-top: 22px; }
   .topbar__right { font-size: 8px; }
@@ -108,7 +110,6 @@ h1 em, h2 em { color: var(--foam); font-style: normal; }
   h1 { font-size: clamp(68px, 18vw, 110px); }
   .story__copy { max-width: 310px; font-size: 13px; }
   .story--middle { align-items: center; }
-  .story--final { align-items: center; }
   .rules { display: block; min-height: auto; padding: 125px 25px 180px; }
   .rules__intro { margin-bottom: 34px; }
   .rule { padding: 22px 20px; }
