@@ -152,9 +152,13 @@
   // The same CSS transition runs when an element enters or leaves the reading area.
   const revealObserver = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
-      entry.target.classList.toggle("is-visible", entry.isIntersecting);
+      if (entry.isIntersecting) {
+        requestAnimationFrame(() => entry.target.classList.add("is-visible"));
+      } else {
+        entry.target.classList.remove("is-visible");
+      }
     });
-  }, { threshold: 0.18, rootMargin: "0px 0px -10% 0px" });
+  }, { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
   document.querySelectorAll(".reveal").forEach((element) => revealObserver.observe(element));
 
   // Small luminous motes drift toward the pointer and fade softly behind the story.
