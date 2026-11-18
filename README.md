@@ -6,16 +6,16 @@ Web narrativa de una sola página donde el fondo avanza con el scroll. Es un pro
 
 ## Qué hace
 
-- **Animación guiada por el scroll:** 239 fotogramas JPG dibujados en un `<canvas>`. El fotograma que se muestra depende de la posición de la página.
+- **Animación guiada por el scroll:** 433 fotogramas JPG (1280×720) dibujados en un `<canvas>`. El fotograma que se muestra depende de la posición de la página.
 - **Carga progresiva:** descarga los fotogramas en paralelo (8 a la vez), con barra de progreso. La página se muestra en cuanto llega el primero y el resto sigue cargando; si falta un fotograma, usa el más cercano disponible.
-- **Vídeo de respaldo:** en móviles táctiles pequeños, con conexión lenta o ahorro de datos, y si los fotogramas tardan demasiado, usa un vídeo en bucle en lugar de la secuencia.
+- **Vídeo de respaldo:** en móviles táctiles pequeños, con conexión lenta o ahorro de datos, y si los fotogramas no llegan, usa un vídeo en bucle en lugar de la secuencia. Antes muestra un aviso con el motivo, que se cierra con «Entendido» y no vuelve a salir durante la sesión.
 - **Partículas luminosas** en un segundo canvas que se acercan al puntero. Con `prefers-reduced-motion` se quedan quietas.
 - **Aparición de secciones** con `IntersectionObserver`.
 - **Oráculo:** formulario cuyas respuestas son frases predefinidas. No usa ningún modelo ni servicio externo.
 
 ## Tecnología
 
-HTML, CSS y JavaScript puro. Canvas 2D, `IntersectionObserver`, Network Information API y Google Fonts (DM Sans y Manrope).
+HTML, CSS y JavaScript puro. Canvas 2D, `IntersectionObserver`, Network Information API, `<dialog>` nativo, `sessionStorage` y Google Fonts (DM Sans y Manrope).
 
 ```
 index.html    estructura y contenido
