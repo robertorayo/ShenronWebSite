@@ -1,5 +1,5 @@
 (() => {
-  const FRAME_COUNT = 239;
+  const FRAME_COUNT = 433;
   const FRAME_PATH = (index) => `assets/secuencia/${String(index).padStart(3, "0")}.jpg`;
   const frameCanvas = document.querySelector("#frame-canvas");
   const frameContext = frameCanvas.getContext("2d", { alpha: false });
@@ -105,7 +105,8 @@
     const percent = Math.round((loadedCount / FRAME_COUNT) * 100);
     loadingBar.style.width = `${percent}%`;
     loadingPercent.textContent = `${percent}%`;
-    if (index === 1 || currentFrame === -1) drawFrame(wantedFrame());
+    // Redibuja siempre: si el fotograma que llega es el que pide el scroll, sustituye al vecino provisional.
+    drawFrame(wantedFrame());
     // The first usable frame is enough to release the page; remaining frames stream in.
     if (index === 1) finishLoading();
     if (loadedCount === FRAME_COUNT) finishLoading();
