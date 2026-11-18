@@ -97,6 +97,8 @@
   }
 
   function markFrameLoaded(index, image) {
+    // Ya en modo vídeo, los fotogramas que lleguen tarde no deben tocar la barra ni retirar la carga.
+    if (videoMode) return;
     if (image) {
       frames[index] = image;
       ready[index] = true;
@@ -122,6 +124,8 @@
     videoMode = true;
     frameCanvas.classList.remove("is-ready");
     video.classList.remove("is-hidden");
+    // drawFrame pausa el vídeo al pintar un fotograma; si llegó a pintarse alguno, hay que reanudarlo.
+    video.play().catch(() => {});
     enterVideoMode("timeout");
   }
 
@@ -166,13 +170,14 @@
     const concurrency = 8;
     let next = 1;
     function loadNext() {
-      if (next > FRAME_COUNT) return;
+      // En modo vídeo se deja de pedir fotogramas: no se usarán y la conexión ya va mal.
+      if (videoMode || next > FRAME_COUNT) return;
       const index = next++;
       const image = new Image();
       image.decoding = "async";
       image.src = FRAME_PATH(index);
       image.onload = async () => {
-        try { if (image.decode) await image.decode(); } catch (_) { /* Image is still drawable after onload. */ }
+        try { if (image.decode) await image.decode(); } catch (_) { /* Tras onload la imagen ya se puede dibujar. */ }
         markFrameLoaded(index, image);
         loadNext();
       };
