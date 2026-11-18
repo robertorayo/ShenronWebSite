@@ -107,26 +107,60 @@
     loadingPercent.textContent = `${percent}%`;
     // Redibuja siempre: si el fotograma que llega es el que pide el scroll, sustituye al vecino provisional.
     drawFrame(wantedFrame());
-    // The first usable frame is enough to release the page; remaining frames stream in.
-    if (index === 1) finishLoading();
-    if (loadedCount === FRAME_COUNT) finishLoading();
+    // Basta el primer fotograma para liberar la página; el resto sigue cargándose en segundo plano.
+    // Solo cuenta si ha llegado de verdad: un error no debe cancelar el paso al vídeo.
+    if (index === 1 && image) finishLoading();
+    if (loadedCount === FRAME_COUNT) {
+      if (frames.filter(Boolean).length < 3) switchToVideo();
+      else finishLoading();
+    }
+  }
+
+  function switchToVideo() {
+    if (videoMode) return;
+    clearTimeout(fallbackTimer);
+    videoMode = true;
+    frameCanvas.classList.remove("is-ready");
+    video.classList.remove("is-hidden");
+    enterVideoMode("timeout");
+  }
+
+  // Aviso al pasar al vídeo: explica el motivo y la pantalla de carga no se retira hasta pulsar «Entendido».
+  // Se recuerda durante la sesión del navegador para no repetirlo en cada recarga.
+  const notice = document.querySelector("#video-notice");
+  const noticeText = document.querySelector("#notice-text");
+  const NOTICE_KEY = "shenron-video-notice";
+  const noticeReasons = {
+    mobile: "Estás en un dispositivo móvil. Para no agotar su memoria ni tus datos, aquí la leyenda se cuenta con una versión más ligera.",
+    slow: "Tu conexión es lenta o tienes activado el ahorro de datos. Para que la página cargue sin esperas, verás una versión más ligera.",
+    timeout: "La secuencia de imágenes no ha llegado a tiempo. Para no hacerte esperar, verás una versión más ligera."
+  };
+
+  function enterVideoMode(reason) {
+    loadingPercent.textContent = "VIDEO";
+    loadingBar.style.width = "100%";
+    let seen = false;
+    try { seen = sessionStorage.getItem(NOTICE_KEY) === "1"; } catch (_) { /* Sin almacenamiento: se muestra el aviso. */ }
+    if (seen || typeof notice.showModal !== "function") {
+      finishLoading();
+      return;
+    }
+    noticeText.textContent = noticeReasons[reason];
+    // «close» llega tanto con el botón como con Esc.
+    notice.addEventListener("close", () => {
+      try { sessionStorage.setItem(NOTICE_KEY, "1"); } catch (_) { /* No se recordará; no pasa nada. */ }
+      finishLoading();
+    }, { once: true });
+    notice.showModal();
   }
 
   fitCanvas(frameCanvas, canvasContext);
   video.play().catch(() => {});
   if (useVideoFallback) {
-    loadingPercent.textContent = "VIDEO";
-    loadingBar.style.width = "100%";
-    finishLoading();
+    enterVideoMode(smallTouch ? "mobile" : "slow");
   } else {
     fallbackTimer = setTimeout(() => {
-      if (frames.filter(Boolean).length < 3) {
-        videoMode = true;
-        frameCanvas.classList.remove("is-ready");
-        video.classList.remove("is-hidden");
-        loadingPercent.textContent = "VIDEO";
-        finishLoading();
-      }
+      if (frames.filter(Boolean).length < 3) switchToVideo();
     }, 3200);
 
     const concurrency = 8;
