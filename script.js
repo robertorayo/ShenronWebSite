@@ -1,5 +1,5 @@
 (() => {
-  const FRAME_COUNT = 239;
+  const FRAME_COUNT = 433;
   const FRAME_PATH = (index) => `assets/secuencia/${String(index).padStart(3, "0")}.jpg`;
   const frameCanvas = document.querySelector("#frame-canvas");
   const frameContext = frameCanvas.getContext("2d", { alpha: false });
@@ -97,6 +97,8 @@
   }
 
   function markFrameLoaded(index, image) {
+    // Ya en modo vídeo, los fotogramas que lleguen tarde no deben tocar la barra ni retirar la carga.
+    if (videoMode) return;
     if (image) {
       frames[index] = image;
       ready[index] = true;
@@ -105,39 +107,77 @@
     const percent = Math.round((loadedCount / FRAME_COUNT) * 100);
     loadingBar.style.width = `${percent}%`;
     loadingPercent.textContent = `${percent}%`;
-    if (index === 1 || currentFrame === -1) drawFrame(wantedFrame());
-    // The first usable frame is enough to release the page; remaining frames stream in.
-    if (index === 1) finishLoading();
-    if (loadedCount === FRAME_COUNT) finishLoading();
+    // Redibuja siempre: si el fotograma que llega es el que pide el scroll, sustituye al vecino provisional.
+    drawFrame(wantedFrame());
+    // Basta el primer fotograma para liberar la página; el resto sigue cargándose en segundo plano.
+    // Solo cuenta si ha llegado de verdad: un error no debe cancelar el paso al vídeo.
+    if (index === 1 && image) finishLoading();
+    if (loadedCount === FRAME_COUNT) {
+      if (frames.filter(Boolean).length < 3) switchToVideo();
+      else finishLoading();
+    }
+  }
+
+  function switchToVideo() {
+    if (videoMode) return;
+    clearTimeout(fallbackTimer);
+    videoMode = true;
+    frameCanvas.classList.remove("is-ready");
+    video.classList.remove("is-hidden");
+    // drawFrame pausa el vídeo al pintar un fotograma; si llegó a pintarse alguno, hay que reanudarlo.
+    video.play().catch(() => {});
+    enterVideoMode("timeout");
+  }
+
+  // Aviso al pasar al vídeo: explica el motivo y la pantalla de carga no se retira hasta pulsar «Entendido».
+  // Se recuerda durante la sesión del navegador para no repetirlo en cada recarga.
+  const notice = document.querySelector("#video-notice");
+  const noticeText = document.querySelector("#notice-text");
+  const NOTICE_KEY = "shenron-video-notice";
+  const noticeReasons = {
+    mobile: "Estás en un dispositivo móvil. Para no agotar su memoria ni tus datos, aquí la leyenda se cuenta con una versión más ligera.",
+    slow: "Tu conexión es lenta o tienes activado el ahorro de datos. Para que la página cargue sin esperas, verás una versión más ligera.",
+    timeout: "La secuencia de imágenes no ha llegado a tiempo. Para no hacerte esperar, verás una versión más ligera."
+  };
+
+  function enterVideoMode(reason) {
+    loadingPercent.textContent = "VIDEO";
+    loadingBar.style.width = "100%";
+    let seen = false;
+    try { seen = sessionStorage.getItem(NOTICE_KEY) === "1"; } catch (_) { /* Sin almacenamiento: se muestra el aviso. */ }
+    if (seen || typeof notice.showModal !== "function") {
+      finishLoading();
+      return;
+    }
+    noticeText.textContent = noticeReasons[reason];
+    // «close» llega tanto con el botón como con Esc.
+    notice.addEventListener("close", () => {
+      try { sessionStorage.setItem(NOTICE_KEY, "1"); } catch (_) { /* No se recordará; no pasa nada. */ }
+      finishLoading();
+    }, { once: true });
+    notice.showModal();
   }
 
   fitCanvas(frameCanvas, canvasContext);
   video.play().catch(() => {});
   if (useVideoFallback) {
-    loadingPercent.textContent = "VIDEO";
-    loadingBar.style.width = "100%";
-    finishLoading();
+    enterVideoMode(smallTouch ? "mobile" : "slow");
   } else {
     fallbackTimer = setTimeout(() => {
-      if (frames.filter(Boolean).length < 3) {
-        videoMode = true;
-        frameCanvas.classList.remove("is-ready");
-        video.classList.remove("is-hidden");
-        loadingPercent.textContent = "VIDEO";
-        finishLoading();
-      }
+      if (frames.filter(Boolean).length < 3) switchToVideo();
     }, 3200);
 
     const concurrency = 8;
     let next = 1;
     function loadNext() {
-      if (next > FRAME_COUNT) return;
+      // En modo vídeo se deja de pedir fotogramas: no se usarán y la conexión ya va mal.
+      if (videoMode || next > FRAME_COUNT) return;
       const index = next++;
       const image = new Image();
       image.decoding = "async";
       image.src = FRAME_PATH(index);
       image.onload = async () => {
-        try { if (image.decode) await image.decode(); } catch (_) { /* Image is still drawable after onload. */ }
+        try { if (image.decode) await image.decode(); } catch (_) { /* Tras onload la imagen ya se puede dibujar. */ }
         markFrameLoaded(index, image);
         loadNext();
       };

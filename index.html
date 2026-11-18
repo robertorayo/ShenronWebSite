@@ -35,8 +35,16 @@
         <div class="eyebrow reveal"><span class="eyebrow__line"></span> UNA LEYENDA DESPIERTA</div>
         <h1 class="reveal" id="opening-title">Más allá de<br />la <em>vida.</em></h1>
         <p class="story__copy reveal">Cuando las siete esferas se reúnen, el cielo escucha. Y del silencio antiguo emerge quien puede cambiarlo todo.</p>
-        <p class="story__whisper reveal">LAS ESFERAS ESTÁN LISTA PARA QUE SE PRONUNCIE LA FRASE <span aria-hidden="true">✦ ✦ ✦ ✦ ✦ ✦ ✦</span></p>
+        <p class="story__whisper reveal">LAS ESFERAS ESTÁN LISTAS PARA QUE SE PRONUNCIE LA FRASE <span aria-hidden="true">✦ ✦ ✦ ✦ ✦ ✦ ✦</span></p>
         <p class="scroll-cue reveal">DESCIENDE AL MITO</p>
+      </section>
+
+      <section class="spheres" id="esferas" aria-labelledby="spheres-title">
+        <div class="spheres__intro reveal">
+          <div class="eyebrow"><span class="eyebrow__line"></span> SIETE FRAGMENTOS DE UN MISMO PODER</div>
+          <h2 id="spheres-title">Siete esferas.<br /><em>Un solo llamado.</em></h2>
+          <p>Cada esfera guarda una parte del dragón. Separadas, son piedras que brillan en lugares remotos; juntas, forman una llave que abre el cielo.</p>
+        </div>
       </section>
 
       <section class="story story--middle" id="leyenda" aria-labelledby="legend-title">
@@ -45,6 +53,12 @@
           <h2 id="legend-title">Majestuoso.<br />Implacable.<br /><em>Eterno.</em></h2>
           <p>Shenron atraviesa las nubes como un río de jade. Su voz retumba entre los mundos: no es un dios que concede por capricho, sino una fuerza antigua que responde al corazón de quien invoca.</p>
         </div>
+      </section>
+
+      <section class="interlude" id="invocacion" aria-labelledby="interlude-title">
+        <div class="eyebrow reveal">LA VOZ QUE ABRE EL CIELO <span class="eyebrow__line"></span></div>
+        <h2 class="reveal" id="interlude-title">El día se<br />vuelve <em>noche.</em></h2>
+        <p class="reveal">Cuando se pronuncian las palabras, la luz se retira del mundo. Las nubes se cierran, el aire se detiene y una columna de jade asciende hacia lo alto.</p>
       </section>
 
       <section class="rules" id="reglas" aria-labelledby="rules-title">
@@ -58,6 +72,19 @@
           <article class="rule reveal"><span class="rule__number">02</span><h3>El tiempo de espera</h3><p>Después de conceder un deseo, las esferas se dispersan y duermen. El ciclo necesita tiempo antes de volver a reunirse.</p></article>
           <article class="rule reveal"><span class="rule__number">03</span><h3>Nada queda sin huella</h3><p>La vida puede regresar, pero toda transformación altera el equilibrio. El dragón no borra las consecuencias.</p></article>
         </div>
+      </section>
+
+      <section class="cycle" id="ciclo" aria-labelledby="cycle-title">
+        <div class="cycle__intro reveal">
+          <div class="eyebrow"><span class="eyebrow__line"></span> EL CICLO ETERNO</div>
+          <h2 id="cycle-title">Lo que se reúne,<br /><em>se dispersa.</em></h2>
+        </div>
+        <ol class="cycle__steps">
+          <li class="cycle__step reveal"><span class="cycle__numeral" aria-hidden="true">I</span><h3>Reunión</h3><p>Siete caminos distintos convergen en un mismo lugar. Nadie encuentra las esferas por azar.</p></li>
+          <li class="cycle__step reveal"><span class="cycle__numeral" aria-hidden="true">II</span><h3>Invocación</h3><p>Las palabras justas despiertan al dragón. El cielo se oscurece y el mundo contiene el aliento.</p></li>
+          <li class="cycle__step reveal"><span class="cycle__numeral" aria-hidden="true">III</span><h3>El deseo</h3><p>Shenron escucha, concede y regresa al silencio del que vino, sin volver la vista atrás.</p></li>
+          <li class="cycle__step reveal"><span class="cycle__numeral" aria-hidden="true">IV</span><h3>Dispersión</h3><p>Las esferas se separan y se vuelven piedra. Duermen hasta que el ciclo pueda empezar de nuevo.</p></li>
+        </ol>
       </section>
 
       <section class="oracle" id="oraculo" aria-labelledby="oracle-title">
@@ -87,5 +114,14 @@
       <span class="loading__sigil">龍</span><span class="loading__label">INVOCANDO A SHENRON</span>
       <span class="loading__track"><i id="loading-bar"></i></span><span class="loading__percent" id="loading-percent">0%</span>
     </div>
+
+    <dialog class="notice" id="video-notice" aria-labelledby="notice-title" aria-describedby="notice-text">
+      <span class="notice__sigil" aria-hidden="true">龍</span>
+      <div class="eyebrow eyebrow--center"><span class="eyebrow__line"></span> ANTES DE EMPEZAR <span class="eyebrow__line"></span></div>
+      <h2 id="notice-title">Aviso de experiencia<br /><em>poco épica</em></h2>
+      <p class="notice__text" id="notice-text"></p>
+      <p class="notice__hint">En un ordenador, el dragón avanza fotograma a fotograma al ritmo de tu scroll. Aquí lo verás en vídeo.</p>
+      <form method="dialog"><button class="notice__button" type="submit">ENTENDIDO</button></form>
+    </dialog>
   </body>
 </html>
