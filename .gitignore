@@ -6,3 +6,8 @@ ShenronFrames/
 
 # Configuración local del panel de vista previa
 .claude/
+
+# Secretos locales y enlace con Vercel
+.env
+.env.local
+.vercel/
