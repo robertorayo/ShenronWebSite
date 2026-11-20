@@ -16,14 +16,28 @@
   const ready = new Array(FRAME_COUNT + 1).fill(false);
   const canvasContext = frameContext;
   let loadedCount = 0;
+  let readyCount = 0;
   let currentFrame = -1;
   let resizeQueued = false;
   let fallbackTimer;
   let videoMode = useVideoFallback;
   let loadingFinished = false;
+  // La pantalla de carga dura al menos esto, con la barra avanzando, aunque los fotogramas lleguen antes.
+  const MIN_LOADING_MS = 2500;
+  // En ordenador solo se pasa al vídeo si a estas alturas no ha llegado casi ningún fotograma.
+  const FALLBACK_MS = 12000;
+  // Orden de carga por pasadas: primero 1 de cada 16 fotogramas, luego 1 de cada 8, 4, 2 y el resto.
+  // Así todo el recorrido tiene imagen enseguida y los huecos se rellenan después.
+  const PASSES = [16, 8, 4, 2, 1];
+  // La página se libera cuando han llegado las dos primeras pasadas (1 de cada 8: unos 55 fotogramas).
+  const GATE_STRIDE = 8;
+  // Con menos fotogramas que estos, la secuencia no sirve y se usa el vídeo.
+  const MIN_FRAMES = 3;
 
-  function fitCanvas(canvas, context) {
-    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  // maxRatio: los fotogramas miden 1280 px, así que dibujarlos al doble de resolución no gana nitidez
+  // y cuesta cuatro veces más en cada paso del scroll; el lienzo de la secuencia usa 1.
+  function fitCanvas(canvas, context, maxRatio = 2) {
+    const ratio = Math.min(window.devicePixelRatio || 1, maxRatio);
     const width = Math.max(1, Math.round(innerWidth * ratio));
     const height = Math.max(1, Math.round(innerHeight * ratio));
     if (canvas.width !== width || canvas.height !== height) {
@@ -82,7 +96,7 @@
     if (resizeQueued) return;
     resizeQueued = true;
     requestAnimationFrame(() => {
-      fitCanvas(frameCanvas, canvasContext);
+      if (fitCanvas(frameCanvas, canvasContext, 1)) currentFrame = -1;
       resizeQueued = false;
       drawFrame(wantedFrame());
     });
@@ -96,26 +110,47 @@
     setTimeout(() => loading.remove(), 800);
   }
 
-  function markFrameLoaded(index, image) {
+  // Orden de carga y cuántos fotogramas forman la primera tanda, la que hace falta para liberar la página.
+  const loadOrder = [];
+  const queued = new Set();
+  let gateSize = 0;
+  for (const stride of PASSES) {
+    for (let index = 1; index <= FRAME_COUNT; index += stride) {
+      if (!queued.has(index)) { queued.add(index); loadOrder.push(index); }
+    }
+    if (stride === GATE_STRIDE) gateSize = loadOrder.length;
+  }
+  let gateDone = 0;
+  let loadingStart = performance.now();
+
+  // La barra avanza con lo que va llegando, pero nunca más deprisa que el tiempo mínimo:
+  // así siempre se ve progresar durante unos segundos y termina cuando la primera tanda está lista.
+  function updateLoading(now) {
+    if (loadingFinished || videoMode) return;
+    // Math.max: el tiempo del primer fotograma puede ser algo anterior a loadingStart.
+    const shown = Math.max(0, Math.min(gateDone / gateSize, (now - loadingStart) / MIN_LOADING_MS));
+    const percent = Math.round(shown * 100);
+    loadingBar.style.width = `${percent}%`;
+    loadingPercent.textContent = `${percent}%`;
+    // Misma regla que para pasar al vídeo: hacen falta al menos 3 fotogramas reales.
+    if (shown >= 1 && readyCount >= MIN_FRAMES) finishLoading();
+    else requestAnimationFrame(updateLoading);
+  }
+
+  function markFrameLoaded(index, image, inGate) {
     // Ya en modo vídeo, los fotogramas que lleguen tarde no deben tocar la barra ni retirar la carga.
     if (videoMode) return;
     if (image) {
       frames[index] = image;
       ready[index] = true;
+      readyCount += 1;
     }
     loadedCount += 1;
-    const percent = Math.round((loadedCount / FRAME_COUNT) * 100);
-    loadingBar.style.width = `${percent}%`;
-    loadingPercent.textContent = `${percent}%`;
+    // Los errores también cuentan para la primera tanda: si no, un fotograma que falla dejaría la carga colgada.
+    if (inGate) gateDone += 1;
     // Redibuja siempre: si el fotograma que llega es el que pide el scroll, sustituye al vecino provisional.
     drawFrame(wantedFrame());
-    // Basta el primer fotograma para liberar la página; el resto sigue cargándose en segundo plano.
-    // Solo cuenta si ha llegado de verdad: un error no debe cancelar el paso al vídeo.
-    if (index === 1 && image) finishLoading();
-    if (loadedCount === FRAME_COUNT) {
-      if (frames.filter(Boolean).length < 3) switchToVideo();
-      else finishLoading();
-    }
+    if (loadedCount === FRAME_COUNT && readyCount < MIN_FRAMES) switchToVideo();
   }
 
   function switchToVideo() {
@@ -158,35 +193,47 @@
     notice.showModal();
   }
 
-  fitCanvas(frameCanvas, canvasContext);
+  fitCanvas(frameCanvas, canvasContext, 1);
   video.play().catch(() => {});
   if (useVideoFallback) {
     enterVideoMode(smallTouch ? "mobile" : "slow");
   } else {
+    // Solo si de verdad no llegan fotogramas: con alguno ya cargado, la página se libera y el resto sigue llegando.
     fallbackTimer = setTimeout(() => {
-      if (frames.filter(Boolean).length < 3) switchToVideo();
-    }, 3200);
+      if (loadingFinished) return;
+      if (readyCount < MIN_FRAMES) {
+        switchToVideo();
+        return;
+      }
+      // Se libera por tiempo: la barra se completa antes de retirarla para que no desaparezca a medias.
+      loadingBar.style.width = "100%";
+      loadingPercent.textContent = "100%";
+      finishLoading();
+    }, FALLBACK_MS);
 
     const concurrency = 8;
-    let next = 1;
+    let next = 0;
     function loadNext() {
       // En modo vídeo se deja de pedir fotogramas: no se usarán y la conexión ya va mal.
-      if (videoMode || next > FRAME_COUNT) return;
-      const index = next++;
+      if (videoMode || next >= loadOrder.length) return;
+      const inGate = next < gateSize;
+      const index = loadOrder[next++];
       const image = new Image();
       image.decoding = "async";
       image.src = FRAME_PATH(index);
       image.onload = async () => {
         try { if (image.decode) await image.decode(); } catch (_) { /* Tras onload la imagen ya se puede dibujar. */ }
-        markFrameLoaded(index, image);
+        markFrameLoaded(index, image, inGate);
         loadNext();
       };
       image.onerror = () => {
-        markFrameLoaded(index, null);
+        markFrameLoaded(index, null, inGate);
         loadNext();
       };
     }
     for (let worker = 0; worker < concurrency; worker += 1) loadNext();
+    loadingStart = performance.now();
+    requestAnimationFrame(updateLoading);
   }
 
   // The same CSS transition runs when an element enters or leaves the reading area.
