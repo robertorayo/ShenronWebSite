@@ -1,5 +1,11 @@
-// Función serverless de Vercel: recibe un deseo, comprueba el límite de tres por visitante y semana
+// Función serverless de Vercel: recibe un deseo, comprueba el límite de tres por dispositivo y semana
 // y pide a Gemini la respuesta de Shenron. La clave de Gemini solo vive aquí, nunca en el navegador.
+//
+// Cómo se cuentan los deseos:
+//   - Por dispositivo: una cookie técnica (shenron_id) con un identificador aleatorio. Así varias personas
+//     en la misma WiFi, que comparten IP, tienen cada una sus tres deseos.
+//   - Por red (IP): un tope más alto, para que borrar la cookie no sirva para pedir deseos sin fin.
+//   - Global: un tope diario de llamadas a Gemini, para no agotar el plan gratuito.
 //
 // Variables de entorno:
 //   GEMINI_API_KEY        clave de Google AI Studio (plan gratuito)
@@ -9,9 +15,15 @@
 //   KV_REST_API_TOKEN     token REST de Upstash Redis (o UPSTASH_REDIS_REST_TOKEN)
 //   IP_SALT               texto aleatorio largo para seudonimizar la IP con HMAC antes de guardarla
 
-import { createHmac } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
+import { isIPv6 } from "node:net";
 
 const MAX_WISHES = 3;
+// Tope por red y semana: tres personas en la misma WiFi. Frena a quien borra la cookie para pedir más.
+const MAX_WISHES_PER_NETWORK = 9;
+const COOKIE_NAME = "shenron_id";
+// La cookie dura algo más que la semana del contador, para que no caduque antes que él.
+const COOKIE_MAX_AGE = 8 * 24 * 60 * 60;
 const WINDOW_SECONDS = 7 * 24 * 60 * 60;
 const MAX_LENGTH = 180;
 const MAX_BODY_BYTES = 2000;
@@ -49,11 +61,20 @@ class ServiceError extends Error {
   }
 }
 
-function json(status, body) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
-  });
+function json(status, body, cookie) {
+  const headers = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
+  // Solo la lee el servidor (HttpOnly), solo viaja por HTTPS y solo a /api, nunca desde otras webs.
+  if (cookie) headers["set-cookie"] = `${COOKIE_NAME}=${cookie}; Path=/api; Max-Age=${COOKIE_MAX_AGE}; HttpOnly; Secure; SameSite=Strict`;
+  return new Response(JSON.stringify(body), { status, headers });
+}
+
+// Identificador del dispositivo: el de su cookie si es válido; si no, uno nuevo de 128 bits aleatorios.
+function deviceId(request) {
+  const value = (request.headers.get("cookie") || "").split(";").map((part) => part.trim())
+    .find((part) => part.startsWith(`${COOKIE_NAME}=`))?.slice(COOKIE_NAME.length + 1);
+  // Solo se acepta el formato que genera el servidor: 32 caracteres hexadecimales.
+  if (value && /^[a-f0-9]{32}$/.test(value)) return { id: value, isNew: false };
+  return { id: randomBytes(16).toString("hex"), isNew: true };
 }
 
 function clientId(request) {
@@ -62,17 +83,27 @@ function clientId(request) {
   const ip = forwarded.split(",")[0].trim() || request.headers.get("x-real-ip");
   if (!ip) return null;
   // Una conexión IPv6 doméstica recibe un bloque /64 entero: se cuenta el bloque, no cada dirección.
-  return ip.includes(":") ? ip.split(":").slice(0, 4).join(":") : ip;
+  return isIPv6(ip) ? expandIPv6(ip).slice(0, 4).join(":") : ip;
+}
+
+// Devuelve los 8 grupos de una IPv6, rellenando el «::» abreviado; así 2001:db8::1 y 2001:db8::2
+// dan el mismo /64 (con un simple split por «:» saldrían bloques distintos).
+function expandIPv6(ip) {
+  const [head, tail = ""] = ip.split("::");
+  const left = head ? head.split(":") : [];
+  const right = tail ? tail.split(":") : [];
+  const groups = ip.includes("::") ? [...left, ...Array(8 - left.length - right.length).fill("0"), ...right] : left;
+  return groups.map((group) => group.toLowerCase().padStart(4, "0"));
 }
 
 function hashId(id, salt) {
-  // HMAC con una sal secreta: en Upstash nunca se guarda la IP, solo una huella seudónima.
+  // HMAC con una sal secreta: en Upstash nunca se guardan la IP ni el identificador, solo una huella seudónima.
   return createHmac("sha256", salt).update(id).digest("hex");
 }
 
 function sameOrigin(request) {
   // Frena a otras webs que intenten usar el Oráculo desde el navegador de sus visitantes.
-  // No frena a un script (puede no mandar Origin): eso lo limita el contador por IP y el tope diario.
+  // No frena a un script (puede no mandar Origin): eso lo limitan el tope por red y el tope diario.
   const origin = request.headers.get("origin");
   if (!origin) return true;
   try {
@@ -102,8 +133,8 @@ async function redis(endpoint, commands) {
 // /multi-exec ejecuta los comandos como una transacción: o todos o ninguno.
 const transaction = (commands) => redis("multi-exec", commands);
 
-async function refund(key) {
-  try { await redis("pipeline", [["EVAL", REFUND_SCRIPT, 1, key]]); } catch (error) { console.error(error.message); }
+async function refund(...keys) {
+  try { await redis("pipeline", keys.map((key) => ["EVAL", REFUND_SCRIPT, 1, key])); } catch (error) { console.error(error.message); }
 }
 
 // Si Gemini está saturado (500, 503) o no llega a contestar, se reintenta una vez, siempre que quede tiempo
@@ -179,30 +210,38 @@ export async function POST(request) {
   if (!wish) return json(400, { error: "vacio" });
   if (wish.length > MAX_LENGTH) return json(400, { error: "largo" });
 
+  const device = deviceId(request);
+  // Todas las respuestas desde aquí llevan la cookie si el dispositivo no la tenía.
+  const reply = (status, body) => json(status, body, device.isNew ? device.id : null);
+
   const salt = process.env.IP_SALT;
   if (!salt) {
     console.error("Falta IP_SALT");
-    return json(503, { respaldo: true });
+    return reply(503, { respaldo: true });
   }
-  const id = clientId(request);
-  // Sin IP no se puede contar (en Vercel siempre llega): mejor el respaldo que un contador compartido por todos.
-  if (!id) return json(503, { respaldo: true });
-  const key = `deseos:${hashId(id, salt)}`;
+  const network = clientId(request);
+  // Sin IP no se puede poner el tope por red (en Vercel siempre llega): mejor el respaldo.
+  if (!network) return reply(503, { respaldo: true });
+  const deviceKey = `deseos:disp:${hashId(device.id, salt)}`;
+  const networkKey = `deseos:red:${hashId(network, salt)}`;
 
   // Se cuenta el deseo antes de llamar a Gemini: así dos peticiones a la vez no pueden saltarse el límite.
   // EXPIRE NX solo pone la caducidad la primera vez, de modo que la semana empieza con el primer deseo.
-  let used;
+  let used, usedNetwork;
   try {
-    [used] = await transaction([["INCR", key], ["EXPIRE", key, WINDOW_SECONDS, "NX"]]);
+    [used, , usedNetwork] = await transaction([
+      ["INCR", deviceKey], ["EXPIRE", deviceKey, WINDOW_SECONDS, "NX"],
+      ["INCR", networkKey], ["EXPIRE", networkKey, WINDOW_SECONDS, "NX"]
+    ]);
   } catch (error) {
     // Sin poder contar no se llama a Gemini: protege la cuota gratuita.
     console.error(error.message);
-    return json(503, { respaldo: true });
+    return reply(503, { respaldo: true });
   }
 
-  if (used > MAX_WISHES) {
-    await refund(key);
-    return json(429, { agotado: true });
+  if (used > MAX_WISHES || usedNetwork > MAX_WISHES_PER_NETWORK) {
+    await refund(deviceKey, networkKey);
+    return reply(429, { agotado: true });
   }
 
   // Tope global del día: si se supera, nadie llama a Gemini hasta mañana y se devuelve el deseo.
@@ -213,21 +252,21 @@ export async function POST(request) {
     if (today > dailyCap) throw new Error("Tope diario de Gemini alcanzado");
   } catch (error) {
     console.error(error.message);
-    await refund(key);
-    return json(503, { respaldo: true });
+    await refund(deviceKey, networkKey);
+    return reply(503, { respaldo: true });
   }
 
   try {
     const respuesta = await askShenron(wish);
-    return json(200, { respuesta, restantes: MAX_WISHES - used });
+    return reply(200, { respuesta, restantes: MAX_WISHES - used });
   } catch (error) {
     console.error(error.message);
     if (error instanceof ServiceError) {
       // Fallo del servicio: el deseo no se gasta y la web usa sus frases fijas.
-      await refund(key);
-      return json(503, { respaldo: true });
+      await refund(deviceKey, networkKey);
+      return reply(503, { respaldo: true });
     }
     // Bloqueo por el contenido del deseo: se gasta, para que no sirva para quemar la cuota gratis.
-    return json(503, { respaldo: true, restantes: MAX_WISHES - used });
+    return reply(503, { respaldo: true, restantes: MAX_WISHES - used });
   }
 }

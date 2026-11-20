@@ -26,27 +26,27 @@
       <p>Roberto Borrallo Álvarez, autor de esta web, un proyecto de fans sin ánimo de lucro. Contacto: <a href="mailto:robertobamym@gmail.com">robertobamym@gmail.com</a>.</p>
 
       <h2>Qué datos se tratan y para qué</h2>
-      <p>La web no usa cookies, analítica ni publicidad. Solo se tratan datos cuando escribes un deseo en el Oráculo:</p>
+      <p>La web no usa analítica ni publicidad, y solo usa una cookie técnica, la del Oráculo. Solo se tratan datos cuando escribes un deseo en el Oráculo:</p>
       <ul>
         <li><strong>El texto de tu deseo.</strong> Se envía a la API de Gemini de Google para generar la respuesta de Shenron. Esta web no lo guarda. Según las condiciones de la API de Gemini, a los servicios usados desde el Espacio Económico Europeo se les aplican las condiciones de los servicios de pago, en las que Google no usa los textos para mejorar sus productos. Aun así, te pedimos que no escribas datos personales ni información sensible.</li>
-        <li><strong>Tu dirección IP, seudonimizada.</strong> Para limitar a tres los deseos de cada visitante por semana, se guarda una huella de tu IP (un HMAC-SHA256 con una clave secreta; en las IPv6, de su bloque /64) junto con el número de deseos usados. La huella no permite leer la IP, pero quien tiene la clave podría comprobar si corresponde a una IP concreta, así que sigue siendo un dato personal. Se borra sola a los siete días del primer deseo. Además, se lleva una cuenta total de deseos por día, sin ningún dato tuyo, para no agotar el servicio gratuito.</li>
+        <li><strong>Una cookie técnica y tu dirección IP, seudonimizadas.</strong> Para que cada dispositivo tenga tres deseos por semana, aunque varias personas compartan la misma WiFi, al usar el Oráculo tu navegador recibe la cookie <code>shenron_id</code>, con un identificador aleatorio que no dice nada de ti. Solo la lee el servidor del Oráculo, sirve únicamente para la seguridad y el límite de uso del Oráculo y caduca a los ocho días. Además, para evitar abusos, hay un tope de deseos por red (tu IP; en las IPv6, su bloque /64). En la base de datos no se guardan ni el identificador ni la IP, sino una huella de cada uno (un HMAC-SHA256 con una clave secreta) junto con el número de deseos usados. La huella no permite leer el dato original, pero quien tiene la clave podría comprobar si corresponde a uno concreto, así que sigue siendo un dato personal. Se borra sola a los siete días del primer deseo. También se lleva una cuenta total de deseos por día, sin ningún dato tuyo, para no agotar el servicio gratuito.</li>
         <li><strong>En tu navegador.</strong> Si la IA no responde, la web usa unas frases fijas y recuerda cuáles te ha mostrado en el almacenamiento de sesión del navegador (<code>sessionStorage</code>), que se borra al cerrar la pestaña. Es un almacenamiento técnico: no sale de tu equipo.</li>
       </ul>
       <p>Además, como cualquier servidor web, el alojamiento registra de forma técnica la IP y la petición durante un tiempo limitado, para el funcionamiento y la seguridad del servicio.</p>
 
       <h2>Base legal</h2>
-      <p>El envío del deseo a Gemini es necesario para prestarte el servicio que pides al pulsar «Invocar» (artículo 6.1.b del RGPD). El contador de deseos y los registros técnicos se basan en el interés legítimo de evitar abusos y mantener el servicio gratuito (artículo 6.1.f).</p>
+      <p>El envío del deseo a Gemini es necesario para prestarte el servicio que pides al pulsar «Invocar» (artículo 6.1.b del RGPD). El contador de deseos y los registros técnicos se basan en el interés legítimo de evitar abusos y mantener el servicio gratuito (artículo 6.1.f). La cookie es estrictamente necesaria para prestar con seguridad el servicio que pides y no se usa para nada más, por lo que no requiere consentimiento (artículo 22.2 de la LSSI).</p>
 
       <h2>Quién más interviene</h2>
       <ul>
         <li><strong>Vercel Inc.</strong>: alojamiento de la web y de la función que atiende al Oráculo.</li>
         <li><strong>Google LLC</strong>: API de Gemini, que genera las respuestas.</li>
-        <li><strong>Upstash, Inc.</strong>: base de datos, alojada en la Unión Europea, donde se guarda el contador de deseos con la huella de la IP.</li>
+        <li><strong>Upstash, Inc.</strong>: base de datos, alojada en la Unión Europea, donde se guardan los contadores de deseos con las huellas del identificador y de la IP.</li>
       </ul>
       <p>Estos proveedores pueden tratar los datos fuera del Espacio Económico Europeo, con las garantías que prevé el RGPD (como las cláusulas contractuales tipo o el Marco de Privacidad de Datos UE-EE. UU.).</p>
 
       <h2>Tus derechos</h2>
-      <p>Puedes pedir el acceso, la rectificación, la supresión, la limitación o la oposición al tratamiento de tus datos escribiendo a <a href="mailto:robertobamym@gmail.com">robertobamym@gmail.com</a>. Como el texto del deseo no se conserva aquí y la IP solo se guarda como huella, para atender tu petición necesitaremos que nos indiques tu IP, y solo podremos responder mientras su huella no haya caducado. Si crees que no se han respetado tus derechos, puedes reclamar ante la Agencia Española de Protección de Datos (<a href="https://www.aepd.es">www.aepd.es</a>).</p>
+      <p>Puedes pedir el acceso, la rectificación, la supresión, la limitación o la oposición al tratamiento de tus datos escribiendo a <a href="mailto:robertobamym@gmail.com">robertobamym@gmail.com</a>. Como el texto del deseo no se conserva aquí y el identificador y la IP solo se guardan como huella, para atender tu petición necesitaremos que nos indiques tu IP o el valor de la cookie <code>shenron_id</code> (lo ves en los ajustes de tu navegador), y solo podremos responder mientras su huella no haya caducado. Puedes borrar la cookie cuando quieras desde esos mismos ajustes. Si crees que no se han respetado tus derechos, puedes reclamar ante la Agencia Española de Protección de Datos (<a href="https://www.aepd.es">www.aepd.es</a>).</p>
 
       <p class="legal__back"><a href="./#oraculo">← VOLVER AL ORÁCULO</a></p>
     </main>

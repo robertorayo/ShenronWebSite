@@ -11,7 +11,7 @@ Web narrativa de una sola página donde el fondo avanza con el scroll. Es un pro
 - **Vídeo de respaldo:** en móviles táctiles pequeños, con conexión lenta o ahorro de datos, y si los fotogramas no llegan, usa un vídeo en bucle en lugar de la secuencia. Antes muestra un aviso con el motivo, que se cierra con «Entendido» y no vuelve a salir durante la sesión.
 - **Partículas luminosas** en un segundo canvas que se acercan al puntero. Con `prefers-reduced-motion` se quedan quietas.
 - **Aparición de secciones** con `IntersectionObserver`.
-- **Oráculo con IA:** el visitante pide un deseo y Shenron responde en primera persona con un texto generado por Gemini (Google), que aparece letra a letra. Cada visitante tiene tres deseos por semana, contados por IP (seudonimizada con HMAC) en Upstash Redis. Tras el tercero, las siete esferas se dispersan, un estallido de luz cubre la pantalla y la página vuelve al inicio. Si la IA no responde, el deseo no se gasta y se usan frases fijas.
+- **Oráculo con IA:** el visitante pide un deseo y Shenron responde en primera persona con un texto generado por Gemini (Google), que aparece letra a letra. Cada dispositivo tiene tres deseos por semana, aunque varias personas compartan WiFi: se cuentan con una cookie técnica en Upstash Redis, con un tope de 9 por red para evitar abusos, y los identificadores se guardan seudonimizados con HMAC. Tras el tercero, las siete esferas se dispersan, un estallido de luz cubre la pantalla y la página vuelve al inicio. Si la IA no responde, el deseo no se gasta y se usan frases fijas.
 
 ## Tecnología
 
