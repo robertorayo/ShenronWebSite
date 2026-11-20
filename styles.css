@@ -28,7 +28,10 @@
   scroll-behavior: smooth;
 }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+/* scrollbar-gutter: el hueco de la barra se reserva siempre, así bloquear el scroll no mueve la página. */
+html { scroll-behavior: smooth; scrollbar-gutter: stable; }
+/* Sin scroll mientras está la pantalla de carga (sin depender de JavaScript) o mientras Shenron responde. */
+html:has(#loading:not(.is-done)), html.is-scroll-locked { overflow: hidden; }
 body { margin: 0; min-width: 320px; background: var(--deep); }
 ::selection { color: var(--deep); background: var(--foam); }
 a { color: inherit; text-decoration: none; }
