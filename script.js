@@ -1,4 +1,9 @@
 (() => {
+  // Al entrar o recargar, la web empieza arriba del todo (el navegador, por defecto, vuelve a donde estabas).
+  // Si se llega con un ancla (por ejemplo, «volver al oráculo» desde la privacidad), se respeta.
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  if (!location.hash) scrollTo({ top: 0, behavior: "instant" });
+
   const FRAME_COUNT = 433;
   // WebP calidad 50 (unos 80 KB cada uno, la mitad que en JPG): pesan menos y la carga es más rápida.
   const FRAME_PATH = (index) => `assets/secuencia/${String(index).padStart(3, "0")}.webp`;
@@ -330,12 +335,55 @@
   let typingFrame = 0;
   let busy = false;
 
-  // Mientras Shenron escucha (o se despide) el formulario no admite otro deseo. Se usa aria-disabled en vez de
-  // disabled para que el botón no pierda el foco; la guarda real es «busy».
+  // Bloqueo del scroll mientras Shenron escucha, responde o se despide. Primero se centra el Oráculo, para
+  // que el sello (de donde salen las esferas) y la respuesta estén a la vista; luego se bloquea con
+  // overflow: hidden en <html>. Hasta que acaba ese desplazamiento, se frenan la rueda, el dedo y las teclas
+  // del usuario (por eso esos listeners no son pasivos: necesitan preventDefault).
+  const oracleInner = document.querySelector(".oracle__inner");
+  const SCROLL_KEYS = new Set([" ", "PageUp", "PageDown", "ArrowUp", "ArrowDown", "Home", "End"]);
+  let scrollLockTimer = 0;
+  const blockScroll = (event) => event.preventDefault();
+  const blockScrollKeys = (event) => {
+    const typing = event.target instanceof HTMLInputElement && !event.target.readOnly;
+    if (SCROLL_KEYS.has(event.key) && !typing) event.preventDefault();
+  };
+
+  function lockScroll() {
+    addEventListener("wheel", blockScroll, { passive: false });
+    addEventListener("touchmove", blockScroll, { passive: false });
+    addEventListener("keydown", blockScrollKeys);
+    const box = oracleInner.getBoundingClientRect();
+    const visible = box.top >= 0 && box.bottom <= innerHeight;
+    const freeze = () => {
+      clearTimeout(scrollLockTimer);
+      document.documentElement.classList.add("is-scroll-locked");
+    };
+    if (visible) {
+      freeze();
+      return;
+    }
+    oracleInner.scrollIntoView({ block: "center", behavior: reducedMotion ? "instant" : "smooth" });
+    // scrollend avisa cuando acaba el desplazamiento suave; el temporizador cubre navegadores sin él.
+    addEventListener("scrollend", freeze, { once: true });
+    scrollLockTimer = setTimeout(freeze, 900);
+  }
+
+  function unlockScroll() {
+    clearTimeout(scrollLockTimer);
+    removeEventListener("wheel", blockScroll);
+    removeEventListener("touchmove", blockScroll);
+    removeEventListener("keydown", blockScrollKeys);
+    document.documentElement.classList.remove("is-scroll-locked");
+  }
+
+  // Mientras Shenron escucha (o se despide) el formulario no admite otro deseo y no se puede hacer scroll.
+  // Se usa aria-disabled en vez de disabled para que el botón no pierda el foco; la guarda real es «busy».
   function lockForm(locked) {
     busy = locked;
     wishInput.readOnly = locked;
     wishButton.setAttribute("aria-disabled", String(locked));
+    if (locked) lockScroll();
+    else unlockScroll();
   }
 
   // Pinta el texto en dos capas: una oculta para lectores de pantalla con el texto completo (se anuncia
