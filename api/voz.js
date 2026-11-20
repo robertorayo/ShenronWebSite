@@ -103,7 +103,7 @@ export async function POST(request) {
       }),
       signal: AbortSignal.timeout(TTS_TIMEOUT_MS)
     });
-    // 429 = el plan gratuito de voz se ha agotado (por minuto o por día): la web usa la voz del navegador.
+    // 429 = el plan gratuito de voz se ha agotado (por minuto o por día): Shenron responde sin voz.
     if (!response.ok) throw new Error(`Gemini TTS ${response.status}`);
     const data = await response.json();
     const audio = data.candidates?.[0]?.content?.parts?.find((part) => part.inlineData)?.inlineData;

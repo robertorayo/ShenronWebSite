@@ -331,6 +331,36 @@
   ];
   const SLEEP_MESSAGE = "El dragón ha regresado a su letargo y ya no escucha más voces por ahora. Vuelve cuando el cielo se abra de nuevo.";
   const SCATTERED_MESSAGE = "Las siete esferas se han dispersado por el mundo. Hasta que vuelvan a reunirse, nadie podrá invocar a Shenron. Eso llevará unos días.";
+  // Respuestas de Shenron cuando no entiende el deseo, una lista por caso (ver unclearWish). Nunca adivinan
+  // lo que se quiso decir. En las cuatro primeras el deseo no se gasta y Shenron lo dice; en «gemini» sí.
+  const unclearReplies = {
+    vacio: [
+      "Me invocas, pero callas. El silencio no despierta a un dragón. Tus deseos siguen intactos.",
+      "Nada ha llegado hasta mí salvo el viento. Habla, y ningún deseo se habrá perdido.",
+      "Una invocación sin palabras es un eco sin voz. Dime qué buscas; tus deseos te esperan."
+    ],
+    signos: [
+      "Solo me llegan signos, como huellas en la arena. Habla con palabras; tus deseos siguen intactos.",
+      "Esos símbolos no tienen voz para un dragón. Escribe lo que anhelas; ningún deseo se ha perdido.",
+      "Veo marcas, no palabras, y el cielo no responde a lo que no se dice. Tus deseos te esperan."
+    ],
+    numero: [
+      "Me ofreces un número y nada más. Las esferas saben contar, pero yo no sé qué anhelas. Tus deseos siguen intactos.",
+      "Una cifra no es un deseo, ni un puesto es un camino. Dime qué buscas; ningún deseo se ha perdido.",
+      "Siete son las esferas y uno solo el dragón, pero los números no me dicen qué deseas. Tus deseos te esperan."
+    ],
+    galimatias: [
+      "Esas palabras no pertenecen a ninguna lengua que yo conozca. Habla con claridad; tus deseos siguen intactos.",
+      "Tus palabras se pierden en el viento y no adivinaré lo que no has dicho. Ningún deseo se ha perdido.",
+      "Hasta el más antiguo de los dragones necesita entender lo que se le pide. Habla claro; tus deseos te esperan."
+    ],
+    gemini: [
+      "He escuchado tu voz, pero no tu deseo. No pondré en tu boca lo que no has dicho, y esta invocación ya se ha consumido.",
+      "Tus palabras no forman ningún deseo que pueda cumplir. El dragón no inventa lo que no se pide, y esta invocación se ha perdido.",
+      "Ni el cielo ni las esferas comprenden lo que has pedido. Esta vez no hay deseo que conceder, pero la invocación ya se ha gastado."
+    ]
+  };
+  const UNCLEAR_KEY = "shenron-no-entendido";
   const FALLBACK_KEY = "shenron-respaldo";
   const TYPE_DELAY = 32;
   // Pausa entre cerrar la tarjeta del tercer deseo y que empiecen a salir las esferas.
@@ -404,7 +434,8 @@
   // ── Voz de Shenron ─────────────────────────────────────────────────────────────────────────────────
   // La respuesta se convierte en voz con api/voz.js (Gemini TTS) y suena con un efecto de dragón: más grave
   // (se reproduce al 85 % de velocidad, lo que baja el tono) y con eco (reverberación sintética).
-  // Si Gemini no da voz (su plan gratuito admite 3 audios por minuto), habla la voz del navegador.
+  // Si Gemini no da voz (su plan gratuito admite 3 audios por minuto), Shenron calla: nunca habla la voz del
+  // navegador, que no suena a dragón. Las frases fijas (respaldo y deseos no entendidos) tampoco suenan.
   // El botón de silencio se recuerda en este navegador; silenciada, ni siquiera se pide el audio.
   const MUTE_KEY = "shenron-voz-silenciada";
   const VOICE_TIMEOUT = 15000;
@@ -450,14 +481,11 @@
 
   async function playDragonVoice(buffer) {
     stopVoice();
-    // En iOS el contexto puede quedar suspendido o interrumpido: si no arranca, habla el navegador.
+    // En iOS el contexto puede quedar suspendido o interrumpido: si no arranca, no suena.
     if (audioContext.state !== "running") {
       try { await audioContext.resume(); } catch (_) { /* Se comprueba abajo. */ }
     }
-    if (audioContext.state !== "running") {
-      speakWithBrowser(lastVoice?.text || "");
-      return;
-    }
+    if (audioContext.state !== "running") return;
     if (!reverb) reverb = makeReverb();
     const source = audioContext.createBufferSource();
     source.buffer = buffer;
@@ -479,21 +507,6 @@
     source.start();
   }
 
-  function speakWithBrowser(text) {
-    if (!("speechSynthesis" in window)) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "es-ES";
-    const voices = speechSynthesis.getVoices();
-    const voice = voices.find((item) => item.lang === "es-ES") || voices.find((item) => item.lang.startsWith("es"));
-    if (voice) utterance.voice = voice;
-    utterance.rate = 0.85;
-    utterance.pitch = 0.4;
-    utterance.addEventListener("start", () => card.classList.add("is-speaking"));
-    utterance.addEventListener("end", () => card.classList.remove("is-speaking"));
-    utterance.addEventListener("error", () => card.classList.remove("is-speaking"));
-    speechSynthesis.speak(utterance);
-  }
-
   // stopVoice para todo; stopPlayback solo lo que suena (al silenciar, el audio que se está pidiendo sigue
   // llegando y se guarda, porque su ficha ya se ha gastado y al reactivar no se podría pedir otra vez).
   function stopVoice() {
@@ -507,7 +520,6 @@
       try { voiceSource.stop(); } catch (_) { /* Ya había terminado. */ }
       voiceSource = null;
     }
-    if ("speechSynthesis" in window) speechSynthesis.cancel();
     card.classList.remove("is-speaking");
   }
 
@@ -537,12 +549,10 @@
         return;
       } catch (_) {
         clearTimeout(timer);
-        // Cancelada a propósito (cierre de la tarjeta): no se habla con otra voz.
-        if (voiceRequest !== controller) return;
-        voiceRequest = null;
+        // Sin voz de Gemini (cuota, red o tiempo agotado) o cancelada al cerrar la tarjeta: Shenron calla.
+        if (voiceRequest === controller) voiceRequest = null;
       }
     }
-    if (!muted) speakWithBrowser(text);
   }
 
   muteButton.addEventListener("click", () => {
@@ -557,7 +567,6 @@
     unlockAudio();
     if (!card.open || !lastVoice || card.classList.contains("is-listening") || voiceRequest) return;
     if (lastVoice.buffer) playDragonVoice(lastVoice.buffer);
-    else speakWithBrowser(lastVoice.text);
   });
 
   // ── Tarjetas ───────────────────────────────────────────────────────────────────────────────────────
@@ -711,10 +720,82 @@
     }, ASCENSION_DELAY);
   }
 
+  // Deseo que Shenron no puede entender: copia de unclearWish() de api/_comun.js, que repite la comprobación
+  // en el servidor; allí están explicados los casos con ejemplos. Si cambias una, cambia la otra.
+  const NUMBER_WORDS = new Set([
+    "cero", "uno", "una", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "once", "doce",
+    "veinte", "cien", "ciento", "mil", "millon", "primero", "primera", "primer", "segundo", "segunda", "tercero",
+    "tercera", "tercer", "cuarto", "cuarta", "quinto", "quinta", "sexto", "sexta", "septimo", "septima", "octavo",
+    "octava", "noveno", "novena", "decimo", "decima", "undecimo", "undecima", "duodecimo", "duodecima"
+  ]);
+  const ORDINAL_ENDINGS = new Set(["o", "a", "os", "as", "er", "ero", "era"]);
+  const KEYBOARD_ROWS = ["qwertyuiop", "asdfghjkln", "zxcvbnm"];
+
+  function unclearWish(text) {
+    const plain = text.toLowerCase().replace(/º/g, "o").replace(/ª/g, "a").normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+    if (!plain) return "vacio";
+    const tokens = plain.match(/\p{N}+|\p{L}+/gu) || [];
+    if (!tokens.length) return "signos";
+    const isNumber = (token) => /^\p{N}+$/u.test(token) || NUMBER_WORDS.has(token) || /^\p{L}*esim[oa]s?$/u.test(token);
+    if (tokens.some(isNumber) && tokens.every((token) => isNumber(token) || ORDINAL_ENDINGS.has(token))) return "numero";
+    const words = plain.match(/\p{L}+/gu) || [];
+    if (words.join("").length < 2 && !/\p{Script=Han}/u.test(plain)) return "galimatias";
+    const latin = plain.replace(/[^a-z]/g, "");
+    if (latin && !/[aeiouy]/.test(latin)) return "galimatias";
+    if (/[b-df-hj-np-tv-xz]{5,}/.test(plain)) return "galimatias";
+    if (words.length === 1 && onKeyboardRow(words[0])) return "galimatias";
+    return null;
+  }
+
+  function onKeyboardRow(word) {
+    const rows = KEYBOARD_ROWS.flatMap((row) => [row, [...row].reverse().join("")]);
+    for (let i = 0; i + 4 <= word.length; i += 1) {
+      if (rows.some((row) => row.includes(word.slice(i, i + 4)))) return true;
+    }
+    return false;
+  }
+
+  // Elige la siguiente frase del caso sin repetir ninguna en la sesión, como fallbackReply. Aquí, al acabarse,
+  // la lista vuelve a empezar: equivocarse al escribir no gasta nada y no debe dormir al dragón.
+  function unclearReply(kind) {
+    // El caso puede venir del servidor: solo se aceptan los conocidos (nada de «__proto__» y similares).
+    if (!Object.hasOwn(unclearReplies, kind)) kind = "galimatias";
+    const replies = unclearReplies[kind];
+    let used = {};
+    try {
+      const stored = JSON.parse(sessionStorage.getItem(UNCLEAR_KEY));
+      if (stored && typeof stored === "object") used = stored;
+    } catch (_) { /* Sin almacenamiento o con datos raros: se empieza de cero. */ }
+    const seen = Array.isArray(used[kind]) ? used[kind] : [];
+    let index = replies.findIndex((_, i) => !seen.includes(i));
+    if (index === -1) index = 0;
+    used[kind] = index === 0 ? [0] : [...seen, index];
+    try { sessionStorage.setItem(UNCLEAR_KEY, JSON.stringify(used)); } catch (_) { /* Se podrán repetir; no pasa nada. */ }
+    return replies[index];
+  }
+
+  // Shenron dice que no ha entendido. El texto se queda en el campo y se selecciona al cerrar, para
+  // corregirlo sin escribirlo de nuevo.
+  function showUnclear(kind, wish) {
+    wishInput.value = wish;
+    lockForm(true);
+    showAnswer(unclearReply(kind), { onClose: () => {
+      lockForm(false);
+      wishInput.select();
+    } });
+  }
+
   wishForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (busy) return;
     const wish = wishInput.value.trim();
-    if (!wish || busy) return;
+    // Se comprueba antes de llamar a la API: así no se gasta ni un deseo ni una petición.
+    const unclear = unclearWish(wish);
+    if (unclear) {
+      unlockAudio();
+      showUnclear(unclear, wishInput.value);
+      return;
+    }
     lockForm(true);
     unlockAudio();
     wishInput.value = "";
@@ -733,7 +814,11 @@
     // Con el tercer deseo gastado, el formulario sigue bloqueado y, al cerrar la tarjeta, empieza la ascensión.
     const last = result.restantes === 0;
     const onClose = last ? releaseDragon : () => lockForm(false);
-    if (result.agotado) showNotice(SCATTERED_MESSAGE, { title: "El ciclo se ha cerrado", onClose });
+    // Por si el servidor lo rechaza aunque el navegador lo diera por bueno (las dos copias deberían coincidir).
+    if (result.error === "sinsentido" || result.error === "vacio") {
+      showUnclear(typeof result.caso === "string" ? result.caso : "vacio", wish);
+    } else if (result.noEntendido) showAnswer(unclearReply("gemini"), { onClose });
+    else if (result.agotado) showNotice(SCATTERED_MESSAGE, { title: "El ciclo se ha cerrado", onClose });
     else if (typeof result.respuesta === "string" && result.respuesta) showAnswer(result.respuesta, { ticket: result.voz, onClose });
     else fallbackReply(onClose);
   });

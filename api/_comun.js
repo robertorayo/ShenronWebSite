@@ -31,6 +31,54 @@ export function sameOrigin(request) {
   }
 }
 
+// Deseo que Shenron no puede entender: se detecta antes de contar nada ni llamar a Gemini, y devuelve
+// el caso (para que el navegador elija la frase) o null si el deseo es válido. Casos, en este orden:
+//   «vacio»      nada o solo espacios: «», «   ».
+//   «signos»     ni una letra ni un número: «???», «😀», «¡¡!!».
+//   «numero»     solo cifras, números u ordinales: «7», «42», «siete», «séptimo», «3.º», «1ª».
+//   «galimatias» letras que no forman palabras:
+//                  - menos de dos letras: «a», «😀a» (salvo un ideograma, como «龍», que ya es una palabra);
+//                  - letras latinas sin ninguna vocal: «xkqzv», «bcdf»;
+//                  - cinco consonantes seguidas o más, que no se dan en español: «asdfghjkl»;
+//                  - una sola palabra con cuatro teclas seguidas de una fila del teclado: «asdf», «qwer», «lkjh».
+// La misma función está copiada en script.js (sin servidor no se puede compartir): si cambias una, cambia la otra.
+const NUMBER_WORDS = new Set([
+  "cero", "uno", "una", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "once", "doce",
+  "veinte", "cien", "ciento", "mil", "millon", "primero", "primera", "primer", "segundo", "segunda", "tercero",
+  "tercera", "tercer", "cuarto", "cuarta", "quinto", "quinta", "sexto", "sexta", "septimo", "septima", "octavo",
+  "octava", "noveno", "novena", "decimo", "decima", "undecimo", "undecima", "duodecimo", "duodecima"
+]);
+// Lo que acompaña a una cifra para hacerla ordinal: «3.º» → «3» y «o»; «1er» → «1» y «er».
+const ORDINAL_ENDINGS = new Set(["o", "a", "os", "as", "er", "ero", "era"]);
+const KEYBOARD_ROWS = ["qwertyuiop", "asdfghjkln", "zxcvbnm"];
+
+export function unclearWish(text) {
+  // Minúsculas y sin tildes, para que «á» cuente como vocal y «ñ» como consonante; «º» y «ª» pasan a letra.
+  const plain = text.toLowerCase().replace(/º/g, "o").replace(/ª/g, "a").normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+  if (!plain) return "vacio";
+  const tokens = plain.match(/\p{N}+|\p{L}+/gu) || [];
+  if (!tokens.length) return "signos";
+  const isNumber = (token) => /^\p{N}+$/u.test(token) || NUMBER_WORDS.has(token) || /^\p{L}*esim[oa]s?$/u.test(token);
+  if (tokens.some(isNumber) && tokens.every((token) => isNumber(token) || ORDINAL_ENDINGS.has(token))) return "numero";
+  const words = plain.match(/\p{L}+/gu) || [];
+  // Un ideograma chino o japonés es una palabra entera («龍»): esa letra sola sí vale.
+  if (words.join("").length < 2 && !/\p{Script=Han}/u.test(plain)) return "galimatias";
+  const latin = plain.replace(/[^a-z]/g, "");
+  if (latin && !/[aeiouy]/.test(latin)) return "galimatias";
+  if (/[b-df-hj-np-tv-xz]{5,}/.test(plain)) return "galimatias";
+  if (words.length === 1 && onKeyboardRow(words[0])) return "galimatias";
+  return null;
+}
+
+// ¿Tiene la palabra cuatro letras seguidas de una fila del teclado, en un sentido o en el otro?
+function onKeyboardRow(word) {
+  const rows = KEYBOARD_ROWS.flatMap((row) => [row, [...row].reverse().join("")]);
+  for (let i = 0; i + 4 <= word.length; i += 1) {
+    if (rows.some((row) => row.includes(word.slice(i, i + 4)))) return true;
+  }
+  return false;
+}
+
 export async function redis(endpoint, commands) {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
