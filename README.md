@@ -6,7 +6,7 @@ Web narrativa de una sola página donde el fondo avanza con el scroll. Es un pro
 
 ## Qué hace
 
-- **Animación guiada por el scroll:** 433 fotogramas JPG (1280×720) dibujados en un `<canvas>`. El fotograma que se muestra depende de la posición de la página.
+- **Animación guiada por el scroll:** 433 fotogramas WebP (1280×720, unos 80 KB cada uno) dibujados en un `<canvas>`. El fotograma que se muestra depende de la posición de la página.
 - **Carga progresiva:** descarga los fotogramas en paralelo (8 a la vez) y por pasadas: primero uno de cada 16, luego uno de cada 8, y así hasta completarlos, para que todo el recorrido tenga imagen cuanto antes. La pantalla de carga dura al menos 2,5 s y se retira cuando ha llegado uno de cada 8 fotogramas; el resto sigue cargando y, si falta uno, se usa el más cercano disponible.
 - **Vídeo de respaldo:** en móviles táctiles pequeños, con conexión lenta o ahorro de datos, y si los fotogramas no llegan, usa un vídeo en bucle en lugar de la secuencia. Antes muestra un aviso con el motivo, que se cierra con «Entendido» y no vuelve a salir durante la sesión.
 - **Partículas luminosas** en un segundo canvas que se acercan al puntero. Con `prefers-reduced-motion` se quedan quietas.
