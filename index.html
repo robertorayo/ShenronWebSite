@@ -102,7 +102,6 @@
             <input id="wish-input" name="wish" maxlength="180" autocomplete="off" placeholder="¿Qué deseas preguntar al dragón?" required />
             <button type="submit"><span>INVOCAR</span><b aria-hidden="true">↗</b></button>
           </form>
-          <div class="oracle__reply" id="oracle-reply" role="status" aria-live="polite"></div>
           <div class="oracle__foot"><span>LAS SIETE ESFERAS TE ESCUCHAN</span><span>龍</span></div>
         </div>
         <footer class="page-footer"><span>UNA HISTORIA SOBRE LO QUE PERMANECE</span><a href="privacidad.html">PRIVACIDAD</a><a href="#inicio">VOLVER AL INICIO ↑</a><p class="page-footer__note">Proyecto de fans sin ánimo de lucro. Dragon Ball y Shenron pertenecen a sus respectivos titulares; esta web no tiene relación con ellos.</p></footer>
@@ -133,6 +132,28 @@
       <p class="notice__text" id="notice-text"></p>
       <p class="notice__hint">En un ordenador, el dragón avanza fotograma a fotograma al ritmo de tu scroll. Aquí lo verás en vídeo.</p>
       <form method="dialog"><button class="notice__button" type="submit">ENTENDIDO</button></form>
+    </dialog>
+
+    <!-- Tarjeta con la respuesta de Shenron: se abre al pulsar «Invocar» y solo se cierra con «Cerrar», la ✕ o Esc. -->
+    <dialog class="shenron-card" id="shenron-card" aria-labelledby="shenron-card-title" aria-describedby="shenron-card-text">
+      <button class="shenron-card__close" type="button" data-close aria-label="Cerrar tarjeta">✕</button>
+      <div class="shenron-card__seal" aria-hidden="true"><span>龍</span></div>
+      <h2 class="shenron-card__eyebrow" id="shenron-card-title">Shenron habla</h2>
+      <p class="shenron-card__text" id="shenron-card-text" aria-live="polite"></p>
+      <div class="shenron-card__actions">
+        <button class="shenron-card__button" type="button" id="shenron-mute" data-muted="false"><svg class="shenron-card__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9v6h4l5 4V5L8 9H4z" /><path class="shenron-card__icon-waves" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" /><path class="shenron-card__icon-mute" d="M16 9l6 6M22 9l-6 6" /></svg><span id="shenron-mute-label">Silenciar voz</span></button>
+        <button class="shenron-card__button shenron-card__button--solid" type="button" data-close>Cerrar</button>
+      </div>
+    </dialog>
+
+    <!-- Aviso con voz de narrador (no habla Shenron): deseos agotados o dragón dormido. -->
+    <dialog class="shenron-card shenron-card--notice" id="notice-card" aria-labelledby="notice-card-title" aria-describedby="notice-card-text">
+      <div class="shenron-card__balls" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <h2 class="shenron-card__eyebrow" id="notice-card-title">El ciclo se ha cerrado</h2>
+      <p class="shenron-card__text" id="notice-card-text"></p>
+      <div class="shenron-card__actions">
+        <button class="shenron-card__button shenron-card__button--solid" type="button" data-close>Entendido</button>
+      </div>
     </dialog>
   </body>
 </html>

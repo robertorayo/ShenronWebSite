@@ -2,6 +2,9 @@
   "functions": {
     "api/deseo.js": {
       "maxDuration": 20
+    },
+    "api/voz.js": {
+      "maxDuration": 20
     }
   },
   "headers": [
