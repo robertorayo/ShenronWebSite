@@ -1,6 +1,7 @@
 (() => {
   const FRAME_COUNT = 433;
-  const FRAME_PATH = (index) => `assets/secuencia/${String(index).padStart(3, "0")}.jpg`;
+  // WebP calidad 50 (unos 80 KB cada uno, la mitad que en JPG): pesan menos y la carga es más rápida.
+  const FRAME_PATH = (index) => `assets/secuencia/${String(index).padStart(3, "0")}.webp`;
   const frameCanvas = document.querySelector("#frame-canvas");
   const frameContext = frameCanvas.getContext("2d", { alpha: false });
   const video = document.querySelector("#fallback-video");
@@ -29,8 +30,9 @@
   // Orden de carga por pasadas: primero 1 de cada 16 fotogramas, luego 1 de cada 8, 4, 2 y el resto.
   // Así todo el recorrido tiene imagen enseguida y los huecos se rellenan después.
   const PASSES = [16, 8, 4, 2, 1];
-  // La página se libera cuando han llegado las dos primeras pasadas (1 de cada 8: unos 55 fotogramas).
-  const GATE_STRIDE = 8;
+  // La página se libera cuando ha llegado la primera pasada (1 de cada 16: 28 fotogramas, unos 2 MB).
+  // Basta para que todo el recorrido tenga imagen; las siguientes pasadas afinan mientras se baja.
+  const GATE_STRIDE = 16;
   // Con menos fotogramas que estos, la secuencia no sirve y se usa el vídeo.
   const MIN_FRAMES = 3;
 
