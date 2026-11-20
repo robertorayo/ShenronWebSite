@@ -117,8 +117,6 @@ h1 em, h2 em { color: var(--foam); font-style: normal; }
 .oracle__reply--notice { color: var(--muted); font-size: 11px; letter-spacing: .04em; }
 .wish-form button[aria-disabled="true"] { opacity: .55; cursor: wait; box-shadow: none; }
 #opening-title:focus { outline: none; }
-.oracle__privacy { margin: 10px 0 0; color: rgba(226, 247, 233, .48); font-size: 10px; line-height: 1.6; }
-.oracle__privacy a { color: var(--foam); text-decoration: underline; text-underline-offset: 2px; }
 
 /* Tras el tercer deseo. --x y --y (los pone script.js) son el centro del sello 龍: de ahí salen las esferas y el estallido.
    El salto al inicio ocurre al 52 % de la animación, con la pantalla cubierta de luz. */
