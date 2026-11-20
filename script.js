@@ -194,8 +194,10 @@
   }
 
   fitCanvas(frameCanvas, canvasContext, 1);
-  video.play().catch(() => {});
+  // El vídeo (8 MB) solo se pide cuando se va a usar: si se descargara siempre, competiría con los
+  // fotogramas por la conexión. En ordenador, hasta entonces el fondo lo cubre el póster.
   if (useVideoFallback) {
+    video.play().catch(() => {});
     enterVideoMode(smallTouch ? "mobile" : "slow");
   } else {
     // Solo si de verdad no llegan fotogramas: con alguno ya cargado, la página se libera y el resto sigue llegando.
