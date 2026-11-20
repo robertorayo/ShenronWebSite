@@ -1,6 +1,6 @@
 # Shenron — El ciclo eterno
 
-Web narrativa de una sola página donde el fondo avanza con el scroll. Es un proyecto visual, sin framework ni dependencias.
+Web narrativa de una sola página donde el fondo avanza con el scroll. Es un proyecto visual, sin framework ni dependencias de npm.
 
 **Web:** <https://shenronwebsite.vercel.app>
 
@@ -11,17 +11,19 @@ Web narrativa de una sola página donde el fondo avanza con el scroll. Es un pro
 - **Vídeo de respaldo:** en móviles táctiles pequeños, con conexión lenta o ahorro de datos, y si los fotogramas no llegan, usa un vídeo en bucle en lugar de la secuencia. Antes muestra un aviso con el motivo, que se cierra con «Entendido» y no vuelve a salir durante la sesión.
 - **Partículas luminosas** en un segundo canvas que se acercan al puntero. Con `prefers-reduced-motion` se quedan quietas.
 - **Aparición de secciones** con `IntersectionObserver`.
-- **Oráculo:** formulario cuyas respuestas son frases predefinidas. No usa ningún modelo ni servicio externo.
+- **Oráculo con IA:** el visitante pide un deseo y Shenron responde en primera persona con un texto generado por Gemini (Google), que aparece letra a letra. Cada visitante tiene tres deseos por semana, contados por IP (seudonimizada con HMAC) en Upstash Redis. Tras el tercero, las siete esferas se dispersan, un estallido de luz cubre la pantalla y la página vuelve al inicio. Si la IA no responde, el deseo no se gasta y se usan frases fijas.
 
 ## Tecnología
 
-HTML, CSS y JavaScript puro. Canvas 2D, `IntersectionObserver`, Network Information API, `<dialog>` nativo, `sessionStorage` y Google Fonts (DM Sans y Manrope).
+HTML, CSS y JavaScript puro. Canvas 2D, `IntersectionObserver`, Network Information API, `<dialog>` nativo, `sessionStorage` y fuentes DM Sans y Manrope servidas desde la propia web. El Oráculo usa una función serverless de Vercel (`api/deseo.js`) que llama por `fetch` a la API de Gemini y a la API REST de Upstash, sin dependencias.
 
 ```
-index.html    estructura y contenido
-styles.css    estilos
-script.js     secuencia de fotogramas, partículas, revelado y oráculo
-assets/       fotogramas y póster
+index.html       estructura y contenido
+privacidad.html  política de privacidad
+styles.css       estilos
+script.js        secuencia de fotogramas, partículas, revelado y oráculo
+api/deseo.js     función serverless del Oráculo (Gemini + límite de deseos)
+assets/          fotogramas, póster y fuentes
 ```
 
 ## Ejecutar en local
@@ -30,4 +32,10 @@ assets/       fotogramas y póster
 python -m http.server 5173
 ```
 
-Y abrir `http://localhost:5173`.
+Y abrir `http://localhost:5173`. Así el Oráculo no tiene servidor y responde con las frases fijas.
+
+Para probar el Oráculo con IA, copia `.env.example` a `.env`, pon tus claves y arranca con Vercel CLI:
+
+```bash
+vercel dev
+```

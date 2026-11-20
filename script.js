@@ -256,22 +256,153 @@
   }
   requestAnimationFrame(animateSouls);
 
+  // Oráculo: cada deseo va a la función serverless /api/deseo, que cuenta tres por visitante y semana
+  // y responde con la voz de Shenron generada por IA. Si la IA no está disponible, se usan frases fijas.
   const wishForm = document.querySelector("#wish-form");
   const wishInput = document.querySelector("#wish-input");
+  const wishButton = wishForm.querySelector("button");
   const reply = document.querySelector("#oracle-reply");
   const oracleReplies = [
     "El dragón ha escuchado tu deseo. Mira dentro de ti: la primera respuesta ya estaba esperando.",
     "Las esferas brillan, pero ningún poder elige por ti. Avanza con valor y el camino aparecerá.",
     "Hasta la noche más larga guarda una promesa de amanecer. Tu deseo ha sido confiado al ciclo eterno."
   ];
-  wishForm.addEventListener("submit", (event) => {
+  const SLEEP_MESSAGE = "El dragón ha regresado a su letargo y ya no escucha más voces por ahora. Vuelve cuando el cielo se abra de nuevo.";
+  const SCATTERED_MESSAGE = "Las siete esferas se han dispersado por el mundo. Hasta que vuelvan a reunirse, nadie podrá invocar a Shenron. Eso llevará unos días.";
+  const FALLBACK_KEY = "shenron-respaldo";
+  const TYPE_DELAY = 32;
+  const BEAM_DELAY = 3500;
+  // Algo más que lo que puede tardar la función en el peor caso (Upstash + Gemini con un reintento).
+  const REQUEST_TIMEOUT = 22000;
+  const openingTitle = document.querySelector("#opening-title");
+  const mainContent = document.querySelector("main");
+  let typingFrame = 0;
+  let busy = false;
+
+  // Mientras Shenron escucha (o se despide) el formulario no admite otro deseo. Se usa aria-disabled en vez de
+  // disabled para que el botón no pierda el foco; la guarda real es «busy».
+  function lockForm(locked) {
+    busy = locked;
+    wishInput.readOnly = locked;
+    wishButton.setAttribute("aria-disabled", String(locked));
+  }
+
+  // Pinta el texto en dos capas: una oculta para lectores de pantalla con el texto completo (se anuncia
+  // una sola vez) y otra visible que se escribe letra a letra. Siempre con textContent, nunca innerHTML.
+  function showReply(text, { kind = "voice", typed = true, onDone } = {}) {
+    cancelAnimationFrame(typingFrame);
+    const spoken = document.createElement("span");
+    spoken.className = "sr-only";
+    spoken.textContent = text;
+    const visible = document.createElement("span");
+    visible.setAttribute("aria-hidden", "true");
+    reply.replaceChildren(spoken, visible);
+    reply.classList.toggle("oracle__reply--notice", kind === "notice");
+    reply.classList.remove("is-visible", "is-glowing", "is-listening");
+    requestAnimationFrame(() => reply.classList.add("is-visible", "is-glowing"));
+
+    if (!typed || reducedMotion) {
+      visible.textContent = text;
+      if (onDone) onDone();
+      return;
+    }
+    // Array.from separa por caracteres reales (no parte letras compuestas ni emojis).
+    const letters = Array.from(text);
+    const start = performance.now();
+    const step = (now) => {
+      // El tiempo del fotograma puede ser algo anterior a «start»: sin Math.max saldría un -1.
+      const count = Math.min(letters.length, Math.max(0, Math.floor((now - start) / TYPE_DELAY)));
+      visible.textContent = letters.slice(0, count).join("");
+      if (count < letters.length) typingFrame = requestAnimationFrame(step);
+      else if (onDone) onDone();
+    };
+    typingFrame = requestAnimationFrame(step);
+  }
+
+  function showListening() {
+    cancelAnimationFrame(typingFrame);
+    reply.textContent = "Shenron escucha…";
+    reply.classList.remove("oracle__reply--notice", "is-glowing");
+    reply.classList.add("is-visible", "is-listening");
+  }
+
+  // Respaldo: frases fijas que no se repiten en la sesión; cuando se acaban, el dragón «se duerme».
+  function fallbackReply(onDone) {
+    let used = [];
+    try {
+      const stored = JSON.parse(sessionStorage.getItem(FALLBACK_KEY));
+      if (Array.isArray(stored)) used = stored;
+    } catch (_) { /* Sin almacenamiento o con datos raros: se empieza de cero. */ }
+    const index = oracleReplies.findIndex((_, i) => !used.includes(i));
+    if (index === -1) {
+      showReply(SLEEP_MESSAGE, { kind: "notice", onDone });
+      return;
+    }
+    try { sessionStorage.setItem(FALLBACK_KEY, JSON.stringify([...used, index])); } catch (_) { /* Se podrán repetir; no pasa nada. */ }
+    showReply(oracleReplies[index], { onDone });
+  }
+
+  // Tras el tercer deseo, Shenron se retira: las esferas se dispersan desde el sello, la luz cubre la pantalla
+  // y, mientras todo está blanco, la página vuelve al inicio. La duración la marca el CSS (--ascension).
+  const ascension = document.querySelector("#ascension");
+  const ascensionBurst = ascension.querySelector(".ascension__burst");
+  const seal = document.querySelector(".oracle__seal");
+  const SWITCH_POINT = 0.52;
+
+  function releaseDragon() {
+    setTimeout(() => {
+      const box = seal.getBoundingClientRect();
+      ascension.style.setProperty("--x", `${box.left + box.width / 2}px`);
+      ascension.style.setProperty("--y", `${box.top + box.height / 2}px`);
+      ascension.classList.add("is-active");
+      // Mientras dura, la página de debajo no recibe ni clics ni teclado.
+      mainContent.inert = true;
+      const duration = parseFloat(getComputedStyle(ascension).getPropertyValue("--ascension")) * 1000 || 5000;
+      setTimeout(() => scrollTo({ top: 0, behavior: "instant" }), duration * SWITCH_POINT);
+      // Si la animación no termina (se cancela o el navegador la omite), el temporizador la retira igualmente.
+      let safety = 0;
+      const finish = () => {
+        clearTimeout(safety);
+        ascensionBurst.removeEventListener("animationend", finish);
+        ascensionBurst.removeEventListener("animationcancel", finish);
+        ascension.classList.remove("is-active");
+        mainContent.inert = false;
+        lockForm(false);
+        // El foco va al título del inicio, para que teclado y lector de pantalla sepan dónde están.
+        // Tiene que ser después de quitar «inert»: un elemento inerte no puede recibir el foco.
+        openingTitle.focus({ preventScroll: true });
+      };
+      safety = setTimeout(finish, duration + 500);
+      ascensionBurst.addEventListener("animationend", finish);
+      ascensionBurst.addEventListener("animationcancel", finish);
+    }, BEAM_DELAY);
+  }
+
+  wishForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (!wishInput.value.trim()) return;
-    reply.textContent = oracleReplies[(wishInput.value.trim().length + wishInput.value.trim().charCodeAt(0)) % oracleReplies.length];
-    reply.classList.remove("is-visible", "is-glowing");
-    requestAnimationFrame(() => {
-      reply.classList.add("is-visible", "is-glowing");
-    });
+    const wish = wishInput.value.trim();
+    if (!wish || busy) return;
+    lockForm(true);
     wishInput.value = "";
+    reply.setAttribute("aria-busy", "true");
+    showListening();
+    let result = { respaldo: true };
+    try {
+      const response = await fetch("/api/deseo", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ deseo: wish }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT)
+      });
+      result = await response.json();
+    } catch (_) { /* Sin conexión, sin servidor o sin respuesta a tiempo: se usa el respaldo. */ }
+    reply.removeAttribute("aria-busy");
+
+    // Con el tercer deseo gastado, el formulario sigue bloqueado hasta que termine la ascensión.
+    const last = result.restantes === 0;
+    const after = last ? releaseDragon : () => lockForm(false);
+    if (result.agotado) showReply(SCATTERED_MESSAGE, { kind: "notice", onDone: after });
+    else if (typeof result.respuesta === "string" && result.respuesta) showReply(result.respuesta, { onDone: after });
+    else fallbackReply(after);
   });
 })();

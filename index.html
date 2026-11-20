@@ -32,7 +32,7 @@
     <main>
       <section class="story story--opening" id="inicio" aria-labelledby="opening-title">
         <div class="eyebrow reveal"><span class="eyebrow__line"></span> UNA LEYENDA DESPIERTA</div>
-        <h1 class="reveal" id="opening-title">Más allá de<br />la <em>vida.</em></h1>
+        <h1 class="reveal" id="opening-title" tabindex="-1">Más allá de<br />la <em>vida.</em></h1>
         <p class="story__copy reveal">Cuando las siete esferas se reúnen, el cielo escucha. Y del silencio antiguo emerge quien puede cambiarlo todo.</p>
         <p class="story__whisper reveal">LAS ESFERAS ESTÁN LISTAS PARA QUE SE PRONUNCIE LA FRASE <span aria-hidden="true">✦ ✦ ✦ ✦ ✦ ✦ ✦</span></p>
         <p class="scroll-cue reveal">DESCIENDE AL MITO</p>
@@ -100,18 +100,31 @@
           <form class="wish-form" id="wish-form">
             <label class="sr-only" for="wish-input">Tu deseo o pregunta</label>
             <input id="wish-input" name="wish" maxlength="180" autocomplete="off" placeholder="¿Qué deseas preguntar al dragón?" required />
-            <button type="submit" aria-label="Enviar deseo"><span>INVOCAR</span><b aria-hidden="true">↗</b></button>
+            <button type="submit"><span>INVOCAR</span><b aria-hidden="true">↗</b></button>
           </form>
+          <p class="oracle__privacy">Tres deseos por semana. Responde una IA de Google (Gemini): no escribas datos personales. <a href="privacidad.html">Privacidad</a></p>
           <div class="oracle__reply" id="oracle-reply" role="status" aria-live="polite"></div>
           <div class="oracle__foot"><span>LAS SIETE ESFERAS TE ESCUCHAN</span><span>龍</span></div>
         </div>
-        <footer class="page-footer"><span>UNA HISTORIA SOBRE LO QUE PERMANECE</span><a href="#inicio">VOLVER AL INICIO ↑</a><p class="page-footer__note">Proyecto de fans sin ánimo de lucro. Dragon Ball y Shenron pertenecen a sus respectivos titulares; esta web no tiene relación con ellos.</p></footer>
+        <footer class="page-footer"><span>UNA HISTORIA SOBRE LO QUE PERMANECE</span><a href="privacidad.html">PRIVACIDAD</a><a href="#inicio">VOLVER AL INICIO ↑</a><p class="page-footer__note">Proyecto de fans sin ánimo de lucro. Dragon Ball y Shenron pertenecen a sus respectivos titulares; esta web no tiene relación con ellos.</p></footer>
       </section>
     </main>
 
     <div class="loading" id="loading" role="status" aria-live="polite">
       <span class="loading__sigil">龍</span><span class="loading__label">INVOCANDO A SHENRON</span>
       <span class="loading__track"><i id="loading-bar"></i></span><span class="loading__percent" id="loading-percent">0%</span>
+    </div>
+
+    <!-- Tras el tercer deseo: las siete esferas se dispersan desde el sello y un estallido de luz lleva al inicio. -->
+    <div class="ascension" id="ascension" aria-hidden="true">
+      <div class="ascension__burst"></div>
+      <span class="dragon-ball"><i>★</i></span>
+      <span class="dragon-ball"><i>★★</i></span>
+      <span class="dragon-ball"><i>★★★</i></span>
+      <span class="dragon-ball"><i>★★★★</i></span>
+      <span class="dragon-ball"><i>★★★★★</i></span>
+      <span class="dragon-ball"><i>★★★★★★</i></span>
+      <span class="dragon-ball"><i>★★★★★★★</i></span>
     </div>
 
     <dialog class="notice" id="video-notice" aria-labelledby="notice-title" aria-describedby="notice-text">
