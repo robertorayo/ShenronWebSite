@@ -15,8 +15,9 @@
 //   KV_REST_API_TOKEN     token REST de Upstash Redis (o UPSTASH_REDIS_REST_TOKEN)
 //   IP_SALT               texto aleatorio largo para seudonimizar la IP con HMAC antes de guardarla
 
-import { createHmac, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { isIPv6 } from "node:net";
+import { json as jsonResponse, hashId, sameOrigin, redis, transaction, voiceTicket } from "./_comun.js";
 
 const MAX_WISHES = 3;
 // Tope por red y semana: tres personas en la misma WiFi. Frena a quien borra la cookie para pedir más.
@@ -34,7 +35,6 @@ const DEFAULT_DAILY_CAP = 400;
 // entrada y 3 s del reembolso) cabe en los 20 s de la función (vercel.json).
 const GEMINI_TIMEOUT_MS = 8000;
 const GEMINI_BUDGET_MS = 12000;
-const REDIS_TIMEOUT_MS = 3000;
 
 // Instrucciones de sistema: definen la voz de Shenron. El texto del visitante va aparte, como mensaje
 // del usuario, para que no pueda reescribirlas.
@@ -62,10 +62,9 @@ class ServiceError extends Error {
 }
 
 function json(status, body, cookie) {
-  const headers = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
   // Solo la lee el servidor (HttpOnly), solo viaja por HTTPS y solo a /api, nunca desde otras webs.
-  if (cookie) headers["set-cookie"] = `${COOKIE_NAME}=${cookie}; Path=/api; Max-Age=${COOKIE_MAX_AGE}; HttpOnly; Secure; SameSite=Strict`;
-  return new Response(JSON.stringify(body), { status, headers });
+  const headers = cookie ? { "set-cookie": `${COOKIE_NAME}=${cookie}; Path=/api; Max-Age=${COOKIE_MAX_AGE}; HttpOnly; Secure; SameSite=Strict` } : {};
+  return jsonResponse(status, body, headers);
 }
 
 // Identificador del dispositivo: el de su cookie si es válido; si no, uno nuevo de 128 bits aleatorios.
@@ -95,43 +94,6 @@ function expandIPv6(ip) {
   const groups = ip.includes("::") ? [...left, ...Array(8 - left.length - right.length).fill("0"), ...right] : left;
   return groups.map((group) => group.toLowerCase().padStart(4, "0"));
 }
-
-function hashId(id, salt) {
-  // HMAC con una sal secreta: en Upstash nunca se guardan la IP ni el identificador, solo una huella seudónima.
-  return createHmac("sha256", salt).update(id).digest("hex");
-}
-
-function sameOrigin(request) {
-  // Frena a otras webs que intenten usar el Oráculo desde el navegador de sus visitantes.
-  // No frena a un script (puede no mandar Origin): eso lo limitan el tope por red y el tope diario.
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === request.headers.get("host");
-  } catch (_) {
-    return false; // «Origin: null» (iframes aislados) u otro valor raro.
-  }
-}
-
-async function redis(endpoint, commands) {
-  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) throw new Error("Upstash sin configurar");
-  const response = await fetch(`${url}/${endpoint}`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify(commands),
-    signal: AbortSignal.timeout(REDIS_TIMEOUT_MS)
-  });
-  if (!response.ok) throw new Error(`Upstash ${response.status}`);
-  const results = await response.json();
-  const failed = results.find((item) => item.error);
-  if (failed) throw new Error(`Upstash: ${failed.error}`);
-  return results.map((item) => item.result);
-}
-
-// /multi-exec ejecuta los comandos como una transacción: o todos o ninguno.
-const transaction = (commands) => redis("multi-exec", commands);
 
 async function refund(...keys) {
   try { await redis("pipeline", keys.map((key) => ["EVAL", REFUND_SCRIPT, 1, key])); } catch (error) { console.error(error.message); }
@@ -258,7 +220,8 @@ export async function POST(request) {
 
   try {
     const respuesta = await askShenron(wish);
-    return reply(200, { respuesta, restantes: MAX_WISHES - used });
+    // La ficha permite pedir la voz de esta respuesta a api/voz.js durante unos minutos.
+    return reply(200, { respuesta, restantes: MAX_WISHES - used, voz: voiceTicket(respuesta, salt) });
   } catch (error) {
     console.error(error.message);
     if (error instanceof ServiceError) {

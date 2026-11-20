@@ -28,9 +28,9 @@
       <h2>Qué datos se tratan y para qué</h2>
       <p>La web no usa analítica ni publicidad, y solo usa una cookie técnica, la del Oráculo. Solo se tratan datos cuando escribes un deseo en el Oráculo:</p>
       <ul>
-        <li><strong>El texto de tu deseo.</strong> Se envía a la API de Gemini de Google para generar la respuesta de Shenron. Esta web no lo guarda. Según las condiciones de la API de Gemini, a los servicios usados desde el Espacio Económico Europeo se les aplican las condiciones de los servicios de pago, en las que Google no usa los textos para mejorar sus productos. Aun así, te pedimos que no escribas datos personales ni información sensible.</li>
+        <li><strong>El texto de tu deseo.</strong> Se envía a la API de Gemini de Google para generar la respuesta de Shenron, y esa respuesta se envía de nuevo a Google para convertirla en voz. Esta web no guarda ni el deseo ni la respuesta. Según las condiciones de la API de Gemini, a los servicios usados desde el Espacio Económico Europeo se les aplican las condiciones de los servicios de pago, en las que Google no usa los textos para mejorar sus productos. Aun así, te pedimos que no escribas datos personales ni información sensible.</li>
         <li><strong>Una cookie técnica y tu dirección IP, seudonimizadas.</strong> Para que cada dispositivo tenga tres deseos por semana, aunque varias personas compartan la misma WiFi, al usar el Oráculo tu navegador recibe la cookie <code>shenron_id</code>, con un identificador aleatorio que no dice nada de ti. Solo la lee el servidor del Oráculo, sirve únicamente para la seguridad y el límite de uso del Oráculo y caduca a los ocho días. Además, para evitar abusos, hay un tope de deseos por red (tu IP; en las IPv6, su bloque /64). En la base de datos no se guardan ni el identificador ni la IP, sino una huella de cada uno (un HMAC-SHA256 con una clave secreta) junto con el número de deseos usados. La huella no permite leer el dato original, pero quien tiene la clave podría comprobar si corresponde a uno concreto, así que sigue siendo un dato personal. Se borra sola a los siete días del primer deseo. También se lleva una cuenta total de deseos por día, sin ningún dato tuyo, para no agotar el servicio gratuito.</li>
-        <li><strong>En tu navegador.</strong> Si la IA no responde, la web usa unas frases fijas y recuerda cuáles te ha mostrado en el almacenamiento de sesión del navegador (<code>sessionStorage</code>), que se borra al cerrar la pestaña. Es un almacenamiento técnico: no sale de tu equipo.</li>
+        <li><strong>En tu navegador.</strong> Si la IA no responde, la web usa unas frases fijas y recuerda cuáles te ha mostrado en el almacenamiento de sesión del navegador (<code>sessionStorage</code>), que se borra al cerrar la pestaña. Si silencias la voz de Shenron, esa preferencia se guarda en el almacenamiento local del navegador (<code>localStorage</code>) para recordarla en tus próximas visitas. Ninguno de los dos sale de tu equipo.</li>
       </ul>
       <p>Además, como cualquier servidor web, el alojamiento registra de forma técnica la IP y la petición durante un tiempo limitado, para el funcionamiento y la seguridad del servicio.</p>
 
@@ -40,7 +40,7 @@
       <h2>Quién más interviene</h2>
       <ul>
         <li><strong>Vercel Inc.</strong>: alojamiento de la web y de la función que atiende al Oráculo.</li>
-        <li><strong>Google LLC</strong>: API de Gemini, que genera las respuestas.</li>
+        <li><strong>Google LLC</strong>: API de Gemini, que genera las respuestas y la voz de Shenron.</li>
         <li><strong>Upstash, Inc.</strong>: base de datos, alojada en la Unión Europea, donde se guardan los contadores de deseos con las huellas del identificador y de la IP.</li>
       </ul>
       <p>Estos proveedores pueden tratar los datos fuera del Espacio Económico Europeo, con las garantías que prevé el RGPD (como las cláusulas contractuales tipo o el Marco de Privacidad de Datos UE-EE. UU.).</p>

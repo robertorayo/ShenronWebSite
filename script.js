@@ -317,7 +317,13 @@
   const wishForm = document.querySelector("#wish-form");
   const wishInput = document.querySelector("#wish-input");
   const wishButton = wishForm.querySelector("button");
-  const reply = document.querySelector("#oracle-reply");
+  const card = document.querySelector("#shenron-card");
+  const cardText = document.querySelector("#shenron-card-text");
+  const muteButton = document.querySelector("#shenron-mute");
+  const muteLabel = document.querySelector("#shenron-mute-label");
+  const noticeCard = document.querySelector("#notice-card");
+  const noticeCardTitle = document.querySelector("#notice-card-title");
+  const noticeCardText = document.querySelector("#notice-card-text");
   const oracleReplies = [
     "El dragón ha escuchado tu deseo. Mira dentro de ti: la primera respuesta ya estaba esperando.",
     "Las esferas brillan, pero ningún poder elige por ti. Avanza con valor y el camino aparecerá.",
@@ -327,7 +333,8 @@
   const SCATTERED_MESSAGE = "Las siete esferas se han dispersado por el mundo. Hasta que vuelvan a reunirse, nadie podrá invocar a Shenron. Eso llevará unos días.";
   const FALLBACK_KEY = "shenron-respaldo";
   const TYPE_DELAY = 32;
-  const BEAM_DELAY = 3500;
+  // Pausa entre cerrar la tarjeta del tercer deseo y que empiecen a salir las esferas.
+  const ASCENSION_DELAY = 500;
   // Algo más que lo que puede tardar la función en el peor caso (Upstash + Gemini con un reintento).
   const REQUEST_TIMEOUT = 22000;
   const openingTitle = document.querySelector("#opening-title");
@@ -342,10 +349,15 @@
   const oracleInner = document.querySelector(".oracle__inner");
   const SCROLL_KEYS = new Set([" ", "PageUp", "PageDown", "ArrowUp", "ArrowDown", "Home", "End"]);
   let scrollLockTimer = 0;
-  const blockScroll = (event) => event.preventDefault();
+  // Lo que pasa dentro de una tarjeta (<dialog>) no se bloquea: en pantallas pequeñas la tarjeta puede
+  // necesitar su propio scroll, y Espacio o las flechas tienen que seguir funcionando en sus botones.
+  const insideDialog = (event) => event.target instanceof Element && Boolean(event.target.closest("dialog"));
+  const blockScroll = (event) => {
+    if (!insideDialog(event)) event.preventDefault();
+  };
   const blockScrollKeys = (event) => {
     const typing = event.target instanceof HTMLInputElement && !event.target.readOnly;
-    if (SCROLL_KEYS.has(event.key) && !typing) event.preventDefault();
+    if (SCROLL_KEYS.has(event.key) && !typing && !insideDialog(event)) event.preventDefault();
   };
 
   function lockScroll() {
@@ -362,10 +374,13 @@
       freeze();
       return;
     }
-    oracleInner.scrollIntoView({ block: "center", behavior: reducedMotion ? "instant" : "smooth" });
+    // Si el Oráculo está lejos (más de una pantalla y media), se salta de golpe: un desplazamiento suave tan
+    // largo no acabaría antes de bloquear el scroll.
+    const far = Math.abs(box.top) > innerHeight * 1.5;
+    oracleInner.scrollIntoView({ block: "center", behavior: reducedMotion || far ? "instant" : "smooth" });
     // scrollend avisa cuando acaba el desplazamiento suave; el temporizador cubre navegadores sin él.
     addEventListener("scrollend", freeze, { once: true });
-    scrollLockTimer = setTimeout(freeze, 900);
+    scrollLockTimer = setTimeout(freeze, 1500);
   }
 
   function unlockScroll() {
@@ -386,23 +401,187 @@
     else unlockScroll();
   }
 
+  // ── Voz de Shenron ─────────────────────────────────────────────────────────────────────────────────
+  // La respuesta se convierte en voz con api/voz.js (Gemini TTS) y suena con un efecto de dragón: más grave
+  // (se reproduce al 85 % de velocidad, lo que baja el tono) y con eco (reverberación sintética).
+  // Si Gemini no da voz (su plan gratuito admite 3 audios por minuto), habla la voz del navegador.
+  // El botón de silencio se recuerda en este navegador; silenciada, ni siquiera se pide el audio.
+  const MUTE_KEY = "shenron-voz-silenciada";
+  const VOICE_TIMEOUT = 15000;
+  let muted = false;
+  try { muted = localStorage.getItem(MUTE_KEY) === "1"; } catch (_) { /* Sin almacenamiento: con voz. */ }
+  let audioContext = null;
+  let reverb = null;
+  let voiceSource = null;
+  let voiceRequest = null;
+  let lastVoice = null; // { text, ticket, buffer }: para volver a hablar si se reactiva la voz
+
+  // La etiqueta dice lo que hará el botón; el icono se cambia con data-muted (sin aria-pressed, que con una
+  // etiqueta cambiante haría anunciar «Activar voz, pulsado»).
+  function updateMuteButton() {
+    muteButton.dataset.muted = String(muted);
+    muteLabel.textContent = muted ? "Activar voz" : "Silenciar voz";
+  }
+  updateMuteButton();
+
+  // El audio solo puede empezar tras un gesto del visitante: el contexto se crea al pulsar «Invocar».
+  function unlockAudio() {
+    const Context = window.AudioContext || window.webkitAudioContext;
+    if (!Context) return;
+    if (!audioContext) audioContext = new Context();
+    if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+  }
+
+  // Eco sintético: ruido que se apaga poco a poco, usado como la respuesta de una sala enorme.
+  function makeReverb(seconds = 2.8, decay = 3.2) {
+    const length = Math.floor(audioContext.sampleRate * seconds);
+    const impulse = audioContext.createBuffer(2, length, audioContext.sampleRate);
+    for (let channel = 0; channel < 2; channel += 1) {
+      const data = impulse.getChannelData(channel);
+      for (let i = 0; i < length; i += 1) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+    }
+    const convolver = audioContext.createConvolver();
+    convolver.buffer = impulse;
+    const wet = audioContext.createGain();
+    wet.gain.value = 0.35;
+    convolver.connect(wet).connect(audioContext.destination);
+    return convolver;
+  }
+
+  async function playDragonVoice(buffer) {
+    stopVoice();
+    // En iOS el contexto puede quedar suspendido o interrumpido: si no arranca, habla el navegador.
+    if (audioContext.state !== "running") {
+      try { await audioContext.resume(); } catch (_) { /* Se comprueba abajo. */ }
+    }
+    if (audioContext.state !== "running") {
+      speakWithBrowser(lastVoice?.text || "");
+      return;
+    }
+    if (!reverb) reverb = makeReverb();
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.playbackRate.value = 0.85;
+    // Se apagan un poco los agudos para que suene más profunda.
+    const tone = audioContext.createBiquadFilter();
+    tone.type = "lowpass";
+    tone.frequency.value = 4200;
+    const dry = audioContext.createGain();
+    dry.gain.value = 0.9;
+    source.connect(tone);
+    tone.connect(dry).connect(audioContext.destination);
+    tone.connect(reverb);
+    source.addEventListener("ended", () => {
+      if (voiceSource === source) card.classList.remove("is-speaking");
+    });
+    voiceSource = source;
+    card.classList.add("is-speaking");
+    source.start();
+  }
+
+  function speakWithBrowser(text) {
+    if (!("speechSynthesis" in window)) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "es-ES";
+    const voices = speechSynthesis.getVoices();
+    const voice = voices.find((item) => item.lang === "es-ES") || voices.find((item) => item.lang.startsWith("es"));
+    if (voice) utterance.voice = voice;
+    utterance.rate = 0.85;
+    utterance.pitch = 0.4;
+    utterance.addEventListener("start", () => card.classList.add("is-speaking"));
+    utterance.addEventListener("end", () => card.classList.remove("is-speaking"));
+    utterance.addEventListener("error", () => card.classList.remove("is-speaking"));
+    speechSynthesis.speak(utterance);
+  }
+
+  // stopVoice para todo; stopPlayback solo lo que suena (al silenciar, el audio que se está pidiendo sigue
+  // llegando y se guarda, porque su ficha ya se ha gastado y al reactivar no se podría pedir otra vez).
+  function stopVoice() {
+    if (voiceRequest) voiceRequest.abort();
+    voiceRequest = null;
+    stopPlayback();
+  }
+
+  function stopPlayback() {
+    if (voiceSource) {
+      try { voiceSource.stop(); } catch (_) { /* Ya había terminado. */ }
+      voiceSource = null;
+    }
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    card.classList.remove("is-speaking");
+  }
+
+  async function speak(text, ticket) {
+    stopVoice();
+    lastVoice = { text, ticket, buffer: null };
+    if (muted) return;
+    if (ticket && audioContext) {
+      const controller = new AbortController();
+      voiceRequest = controller;
+      const timer = setTimeout(() => controller.abort(), VOICE_TIMEOUT);
+      try {
+        const response = await fetch("/api/voz", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ texto: text, ficha: ticket }),
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error(`voz ${response.status}`);
+        const buffer = await audioContext.decodeAudioData(await response.arrayBuffer());
+        clearTimeout(timer);
+        // Si entretanto se cerró la tarjeta, no suena; si se silenció, se guarda para cuando se reactive.
+        if (voiceRequest !== controller) return;
+        voiceRequest = null;
+        lastVoice.buffer = buffer;
+        if (!muted) playDragonVoice(buffer);
+        return;
+      } catch (_) {
+        clearTimeout(timer);
+        // Cancelada a propósito (cierre de la tarjeta): no se habla con otra voz.
+        if (voiceRequest !== controller) return;
+        voiceRequest = null;
+      }
+    }
+    if (!muted) speakWithBrowser(text);
+  }
+
+  muteButton.addEventListener("click", () => {
+    muted = !muted;
+    try { localStorage.setItem(MUTE_KEY, muted ? "1" : "0"); } catch (_) { /* No se recordará; no pasa nada. */ }
+    updateMuteButton();
+    if (muted) {
+      stopPlayback();
+      return;
+    }
+    // Al reactivarla, vuelve a hablar desde el principio. Si el audio aún se está pidiendo, sonará al llegar.
+    unlockAudio();
+    if (!card.open || !lastVoice || card.classList.contains("is-listening") || voiceRequest) return;
+    if (lastVoice.buffer) playDragonVoice(lastVoice.buffer);
+    else speakWithBrowser(lastVoice.text);
+  });
+
+  // ── Tarjetas ───────────────────────────────────────────────────────────────────────────────────────
+  // Al cerrar una tarjeta (botón, ✕ o Esc) se hace lo que toque: liberar el formulario o, tras el tercer
+  // deseo, empezar la ascensión.
+  let afterCard = null;
+  let switchingCard = false;
+
+  function openDialog(dialog) {
+    if (!dialog.open) dialog.showModal();
+  }
+
   // Pinta el texto en dos capas: una oculta para lectores de pantalla con el texto completo (se anuncia
   // una sola vez) y otra visible que se escribe letra a letra. Siempre con textContent, nunca innerHTML.
-  function showReply(text, { kind = "voice", typed = true, onDone } = {}) {
+  function typeText(text) {
     cancelAnimationFrame(typingFrame);
     const spoken = document.createElement("span");
     spoken.className = "sr-only";
     spoken.textContent = text;
     const visible = document.createElement("span");
     visible.setAttribute("aria-hidden", "true");
-    reply.replaceChildren(spoken, visible);
-    reply.classList.toggle("oracle__reply--notice", kind === "notice");
-    reply.classList.remove("is-visible", "is-glowing", "is-listening");
-    requestAnimationFrame(() => reply.classList.add("is-visible", "is-glowing"));
-
-    if (!typed || reducedMotion) {
+    cardText.replaceChildren(spoken, visible);
+    if (reducedMotion) {
       visible.textContent = text;
-      if (onDone) onDone();
       return;
     }
     // Array.from separa por caracteres reales (no parte letras compuestas ni emojis).
@@ -413,20 +592,75 @@
       const count = Math.min(letters.length, Math.max(0, Math.floor((now - start) / TYPE_DELAY)));
       visible.textContent = letters.slice(0, count).join("");
       if (count < letters.length) typingFrame = requestAnimationFrame(step);
-      else if (onDone) onDone();
     };
     typingFrame = requestAnimationFrame(step);
   }
 
+  // Mientras Shenron escucha, los botones de cierre no hacen nada y así se anuncia.
+  function setListening(listening) {
+    card.classList.toggle("is-listening", listening);
+    card.querySelectorAll("[data-close]").forEach((button) => button.setAttribute("aria-disabled", String(listening)));
+  }
+
   function showListening() {
     cancelAnimationFrame(typingFrame);
-    reply.textContent = "Shenron escucha…";
-    reply.classList.remove("oracle__reply--notice", "is-glowing");
-    reply.classList.add("is-visible", "is-listening");
+    cardText.textContent = "Shenron escucha…";
+    setListening(true);
+    openDialog(card);
+  }
+
+  function showAnswer(text, { ticket = null, onClose } = {}) {
+    afterCard = onClose;
+    setListening(false);
+    openDialog(card);
+    typeText(text);
+    speak(text, ticket);
+  }
+
+  function showNotice(text, { title, asleep = false, onClose } = {}) {
+    // Si la tarjeta de Shenron estaba abierta escuchando, se cambia por el aviso sin disparar su cierre.
+    if (card.open) {
+      switchingCard = true;
+      setListening(false);
+      card.close();
+    }
+    afterCard = onClose;
+    noticeCardTitle.textContent = title;
+    noticeCardText.textContent = text;
+    noticeCard.classList.toggle("shenron-card--asleep", asleep);
+    openDialog(noticeCard);
+  }
+
+  function handleCardClosed(event) {
+    // Chrome cierra el diálogo con un segundo Esc aunque se cancele el primero: mientras escucha, se reabre.
+    if (event.target.classList.contains("is-listening")) {
+      event.target.showModal();
+      return;
+    }
+    cancelAnimationFrame(typingFrame);
+    stopVoice();
+    if (switchingCard) {
+      switchingCard = false;
+      return;
+    }
+    const next = afterCard;
+    afterCard = null;
+    if (next) next();
+  }
+
+  for (const dialog of [card, noticeCard]) {
+    dialog.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => {
+      // Mientras Shenron escucha no se cierra: la respuesta está a punto de llegar.
+      if (!dialog.classList.contains("is-listening")) dialog.close();
+    }));
+    dialog.addEventListener("cancel", (event) => {
+      if (dialog.classList.contains("is-listening")) event.preventDefault();
+    });
+    dialog.addEventListener("close", handleCardClosed);
   }
 
   // Respaldo: frases fijas que no se repiten en la sesión; cuando se acaban, el dragón «se duerme».
-  function fallbackReply(onDone) {
+  function fallbackReply(onClose) {
     let used = [];
     try {
       const stored = JSON.parse(sessionStorage.getItem(FALLBACK_KEY));
@@ -434,11 +668,11 @@
     } catch (_) { /* Sin almacenamiento o con datos raros: se empieza de cero. */ }
     const index = oracleReplies.findIndex((_, i) => !used.includes(i));
     if (index === -1) {
-      showReply(SLEEP_MESSAGE, { kind: "notice", onDone });
+      showNotice(SLEEP_MESSAGE, { title: "El dragón descansa", asleep: true, onClose });
       return;
     }
     try { sessionStorage.setItem(FALLBACK_KEY, JSON.stringify([...used, index])); } catch (_) { /* Se podrán repetir; no pasa nada. */ }
-    showReply(oracleReplies[index], { onDone });
+    showAnswer(oracleReplies[index], { onClose });
   }
 
   // Tras el tercer deseo, Shenron se retira: las esferas se dispersan desde el sello, la luz cubre la pantalla
@@ -474,7 +708,7 @@
       safety = setTimeout(finish, duration + 500);
       ascensionBurst.addEventListener("animationend", finish);
       ascensionBurst.addEventListener("animationcancel", finish);
-    }, BEAM_DELAY);
+    }, ASCENSION_DELAY);
   }
 
   wishForm.addEventListener("submit", async (event) => {
@@ -482,8 +716,8 @@
     const wish = wishInput.value.trim();
     if (!wish || busy) return;
     lockForm(true);
+    unlockAudio();
     wishInput.value = "";
-    reply.setAttribute("aria-busy", "true");
     showListening();
     let result = { respaldo: true };
     try {
@@ -495,13 +729,12 @@
       });
       result = await response.json();
     } catch (_) { /* Sin conexión, sin servidor o sin respuesta a tiempo: se usa el respaldo. */ }
-    reply.removeAttribute("aria-busy");
 
-    // Con el tercer deseo gastado, el formulario sigue bloqueado hasta que termine la ascensión.
+    // Con el tercer deseo gastado, el formulario sigue bloqueado y, al cerrar la tarjeta, empieza la ascensión.
     const last = result.restantes === 0;
-    const after = last ? releaseDragon : () => lockForm(false);
-    if (result.agotado) showReply(SCATTERED_MESSAGE, { kind: "notice", onDone: after });
-    else if (typeof result.respuesta === "string" && result.respuesta) showReply(result.respuesta, { onDone: after });
-    else fallbackReply(after);
+    const onClose = last ? releaseDragon : () => lockForm(false);
+    if (result.agotado) showNotice(SCATTERED_MESSAGE, { title: "El ciclo se ha cerrado", onClose });
+    else if (typeof result.respuesta === "string" && result.respuesta) showAnswer(result.respuesta, { ticket: result.voz, onClose });
+    else fallbackReply(onClose);
   });
 })();
