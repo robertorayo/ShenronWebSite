@@ -25,12 +25,6 @@
   Al final espera el Oráculo: pide un deseo y el dragón te responde con su propia voz.</i>
 </p>
 
-<p align="center">
-  <a href="https://shenronwebsite.vercel.app">
-    <img src="assets/poster/shenron-poster.jpg" alt="Fotograma de la web: Shenron enroscado entre la vegetación" width="85%">
-  </a>
-</p>
-
 > [!NOTE]
 > Proyecto de fans sin ánimo de lucro. Dragon Ball y Shenron pertenecen a sus respectivos titulares; esta web no tiene relación con ellos.
 
