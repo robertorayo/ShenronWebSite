@@ -67,23 +67,38 @@ El visitante pide un deseo y Shenron responde en primera persona con un texto ge
 
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'primaryColor':'#06221a','primaryTextColor':'#d4f7df','primaryBorderColor':'#159b70','lineColor':'#159b70','secondaryColor':'#087653','tertiaryColor':'#041510','fontFamily':'Segoe UI, Arial, sans-serif'}}}%%
-flowchart LR
-    A([🙏 Deseo]) --> B{¿Se entiende?}
-    B -- No --> F[Frase fija<br/>el deseo no se gasta]
-    B -- Sí --> C[api/deseo.js<br/>3 por dispositivo y semana<br/>Upstash Redis]
-    C --> D[Gemini<br/>respuesta de Shenron]
-    D --> E[api/voz.js<br/>Gemini TTS]
-    E --> G([🐉 Tarjeta + voz<br/>eco y tono grave])
-    D -. falla .-> H[Frase fija<br/>el deseo no se gasta]
+flowchart TD
+    A([🙏 El visitante pide un deseo]) --> B{¿Se entiende?}
+    B -->|" no "| F[Frase fija · el deseo no se gasta]
+    B -->|" sí "| C[api/deseo.js · cuenta el deseo en Upstash Redis]
+    C --> D[Gemini escribe la respuesta de Shenron]
+    D -.->|" falla "| H[Frase fija · el deseo no se gasta]
+    D --> E[api/voz.js · Gemini TTS pone la voz]
+    E --> G([🐉 Tarjeta con la respuesta y voz del dragón])
 ```
 
-| | |
-|---|---|
-| 🎟️ **Tres deseos por semana** | Se cuentan por dispositivo con una cookie técnica en Upstash Redis, aunque varias personas compartan WiFi, con un tope de 9 por red para evitar abusos. Los identificadores se guardan seudonimizados con HMAC. |
-| 🔊 **Voz del dragón** | Se puede silenciar y la preferencia se recuerda. Si la voz no está disponible, la respuesta aparece sin voz. |
-| 🌀 **Deseos que no entiende** | Un deseo vacío, solo con signos, solo con números o con letras que no forman palabras («asdf», «xkqzv») se detecta antes de llamar a Gemini: Shenron contesta con una frase fija y el deseo no se gasta. Si es Gemini quien no lo entiende, también responde con una frase fija, pero ese deseo sí cuenta. |
-| 🛡️ **Respaldo y topes** | Si la IA no responde, el deseo no se gasta y se usan frases fijas. Un tope diario de llamadas a Gemini y otro de audios, entre todos los visitantes, protegen el plan gratuito. |
-| 🟠 **Las siete esferas** | Al cerrar la tarjeta del tercer deseo, las esferas se dispersan, un estallido de luz cubre la pantalla y la página vuelve al inicio. |
+<table>
+  <tr>
+    <td width="26%"><b>🎟️ Tres deseos por semana</b></td>
+    <td>Se cuentan por dispositivo con una cookie técnica en Upstash Redis, aunque varias personas compartan WiFi, con un tope de 9 por red para evitar abusos. Los identificadores se guardan seudonimizados con HMAC.</td>
+  </tr>
+  <tr>
+    <td><b>🔊 Voz del dragón</b></td>
+    <td>Se puede silenciar y la preferencia se recuerda. Si la voz no está disponible, la respuesta aparece sin voz.</td>
+  </tr>
+  <tr>
+    <td><b>🌀 Deseos que no entiende</b></td>
+    <td>Un deseo vacío, solo con signos, solo con números o con letras que no forman palabras («asdf», «xkqzv») se detecta antes de llamar a Gemini: Shenron contesta con una frase fija y el deseo no se gasta. Si es Gemini quien no lo entiende, también responde con una frase fija, pero ese deseo sí cuenta.</td>
+  </tr>
+  <tr>
+    <td><b>🛡️ Respaldo y topes</b></td>
+    <td>Si la IA no responde, el deseo no se gasta y se usan frases fijas. Un tope diario de llamadas a Gemini y otro de audios, entre todos los visitantes, protegen el plan gratuito.</td>
+  </tr>
+  <tr>
+    <td><b>🟠 Las siete esferas</b></td>
+    <td>Al cerrar la tarjeta del tercer deseo, las esferas se dispersan, un estallido de luz cubre la pantalla y la página vuelve al inicio.</td>
+  </tr>
+</table>
 
 ## 🧩 Tecnología
 
