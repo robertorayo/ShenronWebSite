@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-labelledby="t d">
+  <title id="t">Shenron — El ciclo eterno</title>
+  <desc id="d">Banner del proyecto en tonos jade con el sello 龍.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#041510"/>
+      <stop offset=".55" stop-color="#06221a"/>
+      <stop offset="1" stop-color="#087653"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".2" cy=".5" r=".45">
+      <stop offset="0" stop-color="#159b70" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#159b70" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f2fff7"/>
+      <stop offset="1" stop-color="#8ae0ba"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="320" rx="18" fill="url(#bg)"/>
+  <rect width="1280" height="320" rx="18" fill="url(#glow)"/>
+
+  <!-- Partículas -->
+  <g fill="#d4f7df">
+    <circle cx="420" cy="60" r="2" opacity=".7"/>
+    <circle cx="560" cy="255" r="1.6" opacity=".5"/>
+    <circle cx="760" cy="40" r="1.4" opacity=".6"/>
+    <circle cx="980" cy="270" r="2.2" opacity=".45"/>
+    <circle cx="1120" cy="70" r="1.8" opacity=".6"/>
+    <circle cx="1210" cy="190" r="1.4" opacity=".5"/>
+    <circle cx="880" cy="140" r="1.2" opacity=".4"/>
+  </g>
+
+  <!-- Sello 龍 con dos anillos -->
+  <g transform="translate(250 160)">
+    <circle r="112" fill="none" stroke="#8ae0ba" stroke-opacity=".25" stroke-width="1.5"/>
+    <circle r="90" fill="none" stroke="#8ae0ba" stroke-opacity=".55" stroke-width="2"/>
+    <circle r="70" fill="#06221a" stroke="#159b70" stroke-width="3"/>
+    <text y="26" text-anchor="middle" font-family="'Noto Serif CJK SC','Noto Serif JP','Microsoft YaHei','PingFang SC',serif" font-size="76" fill="#d4f7df">龍</text>
+  </g>
+
+  <!-- Título -->
+  <text x="430" y="150" font-family="'Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="88" font-weight="700" letter-spacing="10" fill="url(#title)">SHENRON</text>
+  <text x="434" y="198" font-family="'Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="26" letter-spacing="8" fill="#8ae0ba">EL CICLO ETERNO</text>
+  <line x1="434" y1="226" x2="760" y2="226" stroke="#159b70" stroke-width="2"/>
+  <text x="434" y="262" font-family="'Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="20" fill="#d4f7df" fill-opacity=".78">Web narrativa guiada por el scroll · Oráculo con IA y voz del dragón</text>
+</svg>
